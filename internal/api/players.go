@@ -146,7 +146,7 @@ func (h *RoundsHandler) RemovePlayer(c *gin.Context) {
 		return
 	}
 
-	err = h.queries.DeletePlayer(ctx, database.DeletePlayerParams{
+	player, err := h.queries.DeletePlayer(ctx, database.DeletePlayerParams{
 		ID:     playerID,
 		GameID: game.ID,
 	})
@@ -159,7 +159,8 @@ func (h *RoundsHandler) RemovePlayer(c *gin.Context) {
 	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 		Type: "player_left",
 		Data: gin.H{
-			"id": playerID,
+			"id":       player.ID,
+			"nickname": player.Nickname,
 		},
 	})
 

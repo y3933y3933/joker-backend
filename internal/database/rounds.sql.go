@@ -11,41 +11,82 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const completeRound = `-- name: CompleteRound :exec
+UPDATE rounds
+SET status = $2,
+    is_joker = $3
+WHERE id = $1
+`
+
+type CompleteRoundParams struct {
+	ID      int64
+	Status  string
+	IsJoker pgtype.Bool
+}
+
+func (q *Queries) CompleteRound(ctx context.Context, arg CompleteRoundParams) error {
+	_, err := q.db.Exec(ctx, completeRound, arg.ID, arg.Status, arg.IsJoker)
+	return err
+}
+
 const createRound = `-- name: CreateRound :one
-INSERT INTO rounds (game_id, question_id, current_player_id, status)
-VALUES ($1, $2, $3, 'pending')
-RETURNING id, question_id, current_player_id, status, created_at
+INSERT INTO rounds (
+  game_id, question_id, question_player_id, answer_player_id,deck, status
+)
+VALUES (
+  $1, $2, $3, $4,$5, 'pending'
+)
+RETURNING id, question_id, question_player_id,answer_player_id, status
 `
 
 type CreateRoundParams struct {
-	GameID          int64
-	QuestionID      int64
-	CurrentPlayerID int64
+	GameID           int64
+	QuestionID       pgtype.Int8
+	QuestionPlayerID int64
+	AnswerPlayerID   pgtype.Int8
+	Deck             []string
 }
 
 type CreateRoundRow struct {
-	ID              int64
-	QuestionID      int64
-	CurrentPlayerID int64
-	Status          string
-	CreatedAt       pgtype.Timestamptz
+	ID               int64
+	QuestionID       pgtype.Int8
+	QuestionPlayerID int64
+	AnswerPlayerID   pgtype.Int8
+	Status           string
 }
 
 func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (CreateRoundRow, error) {
-	row := q.db.QueryRow(ctx, createRound, arg.GameID, arg.QuestionID, arg.CurrentPlayerID)
+	row := q.db.QueryRow(ctx, createRound,
+		arg.GameID,
+		arg.QuestionID,
+		arg.QuestionPlayerID,
+		arg.AnswerPlayerID,
+		arg.Deck,
+	)
 	var i CreateRoundRow
 	err := row.Scan(
 		&i.ID,
 		&i.QuestionID,
-		&i.CurrentPlayerID,
+		&i.QuestionPlayerID,
+		&i.AnswerPlayerID,
 		&i.Status,
-		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const finishRound = `-- name: FinishRound :exec
+UPDATE rounds
+SET status = 'done'
+WHERE id = $1
+`
+
+func (q *Queries) FinishRound(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, finishRound, id)
+	return err
+}
+
 const getCurrentRoundByGameCode = `-- name: GetCurrentRoundByGameCode :one
-SELECT r.id, r.current_player_id, r.question_id, r.is_joker, r.created_at, g.id AS game_id,
+SELECT r.id, r.question_player_id, r.answer_player_id, r.question_id, r.is_joker, r.created_at, g.id AS game_id,
        r.status, g.level,
        q.content AS question_content
 FROM rounds r
@@ -57,15 +98,16 @@ LIMIT 1
 `
 
 type GetCurrentRoundByGameCodeRow struct {
-	ID              int64
-	CurrentPlayerID int64
-	QuestionID      int64
-	IsJoker         pgtype.Bool
-	CreatedAt       pgtype.Timestamptz
-	GameID          int64
-	Status          string
-	Level           string
-	QuestionContent string
+	ID               int64
+	QuestionPlayerID int64
+	AnswerPlayerID   pgtype.Int8
+	QuestionID       pgtype.Int8
+	IsJoker          pgtype.Bool
+	CreatedAt        pgtype.Timestamptz
+	GameID           int64
+	Status           string
+	Level            string
+	QuestionContent  string
 }
 
 func (q *Queries) GetCurrentRoundByGameCode(ctx context.Context, code string) (GetCurrentRoundByGameCodeRow, error) {
@@ -73,7 +115,8 @@ func (q *Queries) GetCurrentRoundByGameCode(ctx context.Context, code string) (G
 	var i GetCurrentRoundByGameCodeRow
 	err := row.Scan(
 		&i.ID,
-		&i.CurrentPlayerID,
+		&i.QuestionPlayerID,
+		&i.AnswerPlayerID,
 		&i.QuestionID,
 		&i.IsJoker,
 		&i.CreatedAt,
@@ -86,7 +129,7 @@ func (q *Queries) GetCurrentRoundByGameCode(ctx context.Context, code string) (G
 }
 
 const getLatestRoundInGame = `-- name: GetLatestRoundInGame :one
-SELECT id, game_id, question_id, current_player_id, is_joker, status, created_at FROM rounds
+SELECT id, game_id, question_id, question_player_id, is_joker, status, created_at, answer, answer_player_id, deck FROM rounds
 WHERE game_id = $1
 ORDER BY id DESC
 LIMIT 1
@@ -99,16 +142,19 @@ func (q *Queries) GetLatestRoundInGame(ctx context.Context, gameID int64) (Round
 		&i.ID,
 		&i.GameID,
 		&i.QuestionID,
-		&i.CurrentPlayerID,
+		&i.QuestionPlayerID,
 		&i.IsJoker,
 		&i.Status,
 		&i.CreatedAt,
+		&i.Answer,
+		&i.AnswerPlayerID,
+		&i.Deck,
 	)
 	return i, err
 }
 
 const getRoundByID = `-- name: GetRoundByID :one
-SELECT id, game_id, question_id, current_player_id, is_joker, status, created_at FROM rounds WHERE id = $1
+SELECT id, game_id, question_id, question_player_id, is_joker, status, created_at, answer, answer_player_id, deck FROM rounds WHERE id = $1
 `
 
 func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
@@ -118,12 +164,47 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 		&i.ID,
 		&i.GameID,
 		&i.QuestionID,
-		&i.CurrentPlayerID,
+		&i.QuestionPlayerID,
 		&i.IsJoker,
 		&i.Status,
 		&i.CreatedAt,
+		&i.Answer,
+		&i.AnswerPlayerID,
+		&i.Deck,
 	)
 	return i, err
+}
+
+const setRoundAnswer = `-- name: SetRoundAnswer :exec
+UPDATE rounds
+SET answer = $2
+WHERE id = $1
+`
+
+type SetRoundAnswerParams struct {
+	ID     int64
+	Answer pgtype.Text
+}
+
+func (q *Queries) SetRoundAnswer(ctx context.Context, arg SetRoundAnswerParams) error {
+	_, err := q.db.Exec(ctx, setRoundAnswer, arg.ID, arg.Answer)
+	return err
+}
+
+const setRoundQuestionID = `-- name: SetRoundQuestionID :exec
+UPDATE rounds
+SET question_id = $2
+WHERE id = $1
+`
+
+type SetRoundQuestionIDParams struct {
+	ID         int64
+	QuestionID pgtype.Int8
+}
+
+func (q *Queries) SetRoundQuestionID(ctx context.Context, arg SetRoundQuestionIDParams) error {
+	_, err := q.db.Exec(ctx, setRoundQuestionID, arg.ID, arg.QuestionID)
+	return err
 }
 
 const updateRoundStatus = `-- name: UpdateRoundStatus :exec

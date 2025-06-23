@@ -4,9 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
-	"net/http"
-
-	"math/rand"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -34,50 +32,13 @@ type CurrentPlayer struct {
 	Nickname string `json:"nickname"`
 }
 type CurrentRoundResponse struct {
-	RoundID         int64  `json:"roundId"`
-	Question        string `json:"question"`
-	GameID          int64  `json:"gameId"`
-	IsJoker         *bool  `json:"isJoker"`
-	Status          string `json:"status"`
-	CurrentPlayerID int64  `json:"currentPlayerId"`
-}
-
-func (h *RoundsHandler) GetCurrentRound(c *gin.Context) {
-	ctx := c.Request.Context()
-	gameCode := c.Param("code")
-
-	playerIDStr := c.Query("player_id")
-	playerID, err := utils.ParseID(playerIDStr)
-
-	if err != nil {
-		BadRequest(c, "invalid player id")
-		return
-	}
-
-	round, err := h.queries.GetCurrentRoundByGameCode(ctx, gameCode)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			NotFound(c, "no round found for this game")
-		} else {
-			h.logger.Error("get current round failed", err)
-			InternalServerError(c, "failed to get current round")
-		}
-		return
-	}
-
-	if round.CurrentPlayerID != playerID {
-		round.QuestionContent = ""
-	}
-
-	Success(c, CurrentRoundResponse{
-		RoundID:         round.ID,
-		GameID:          round.GameID,
-		CurrentPlayerID: round.CurrentPlayerID,
-		IsJoker:         &round.IsJoker.Bool,
-		Status:          round.Status,
-		Question:        round.QuestionContent,
-	})
-
+	RoundID          int64  `json:"roundId"`
+	Question         string `json:"question"`
+	GameID           int64  `json:"gameId"`
+	IsJoker          *bool  `json:"isJoker"`
+	Status           string `json:"status"`
+	QuestionPlayerID int64  `json:"questionPlayerId"`
+	AnswerPlayerID   int64  `json:"answerPlayerId"`
 }
 
 type CreateRoundRequest struct {
@@ -89,258 +50,371 @@ type CreateRoundResponse struct {
 	PlayerID int64 `json:"playerId"`
 }
 
-func (h *RoundsHandler) CreateRound(c *gin.Context) {
+func (h *RoundsHandler) StartGame(c *gin.Context) {
 	ctx := c.Request.Context()
 	code := c.Param("code")
-
-	var req CreateRoundRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		BadRequest(c, "invalid player_id")
-		return
-	}
 
 	game, err := h.queries.GetGameByCode(ctx, code)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			NotFound(c, "game not found")
-		} else {
-			InternalServerError(c, "db error")
+			return
 		}
+		InternalServerError(c, "get game failed")
 		return
 	}
 
-	question, err := h.queries.GetRandomQuestionByLevel(ctx, game.Level)
-	if err != nil {
-		InternalServerError(c, "failed to pick question")
+	// 取得所有玩家（照加入順序）
+	players, err := h.queries.ListPlayersByGameCode(ctx, game.Code)
+	if err != nil || len(players) < 2 {
+		InternalServerError(c, "need at least 2 players")
 		return
 	}
 
+	// 找出出題者與回答者
+	questioner := players[0]
+	answerer := players[1%len(players)] // 支援兩人時也 OK
+
+	deck := utils.CreateShuffledDeck(1, 3)
+
+	// 建立 round（暫不指定題目）
 	round, err := h.queries.CreateRound(ctx, database.CreateRoundParams{
-		GameID:          game.ID,
-		QuestionID:      question.ID,
-		CurrentPlayerID: req.PlayerID,
+		GameID:           game.ID,
+		QuestionID:       pgtype.Int8{Valid: false},
+		QuestionPlayerID: questioner.ID,
+		AnswerPlayerID:   pgtype.Int8{Int64: answerer.ID, Valid: true},
+		Deck:             deck,
 	})
 	if err != nil {
-		InternalServerError(c, "failed to create round")
+		InternalServerError(c, "create round failed")
 		return
 	}
 
-	// ✅ WebSocket 廣播
-	// 廣播誰是出題者（全體看到）
+	// 廣播開始遊戲 & 告知出題者與回答者
 	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 		Type: "game_started",
 		Data: gin.H{
-			"roundId":  round.ID,
-			"playerId": round.CurrentPlayerID,
+			"roundId":      round.ID,
+			"questionerId": questioner.ID,
+			"answererId":   answerer.ID,
 		},
 	})
 
-	// 私訊題目給該玩家（只有他看到）
-	h.hub.SendToPlayer(game.Code, round.CurrentPlayerID, ws.WebSocketMessage{
-		Type: "round_question",
-		Data: gin.H{
-			"question": question.Content,
-		},
+	Success(c, gin.H{
+		"roundId":      round.ID,
+		"questionerId": questioner.ID,
+		"answererId":   answerer.ID,
 	})
-
-	// ✅ 回傳給建立 round 的前端（主持人）
-	Success(c, CreateRoundResponse{
-		RoundID:  round.ID,
-		PlayerID: round.CurrentPlayerID,
-	})
-
 }
 
-func (h *RoundsHandler) DrawCard(c *gin.Context) {
+type SubmitQuestionRequest struct {
+	QuestionID int64 `json:"questionId" binding:"required"`
+}
+
+func (h *RoundsHandler) SubmitQuestion(c *gin.Context) {
 	ctx := c.Request.Context()
-	gameCode := c.Param("code")
-
-	roundIDParam := c.Param("id")
-	roundID, err := utils.ParseID(roundIDParam)
-
+	code := c.Param("code")
+	roundIDStr := c.Param("id")
+	roundID, err := utils.ParseID(roundIDStr)
 	if err != nil {
 		BadRequest(c, "invalid round id")
 		return
 	}
 
-	game, err := h.queries.GetGameByCode(ctx, gameCode)
+	var req SubmitQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequest(c, "invalid questionId")
+		return
+	}
+
+	game, err := h.queries.GetGameByCode(ctx, code)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			NotFound(c, "game not found")
-			return
-		}
-		InternalServerError(c, "db error")
+		NotFound(c, "game not found")
 		return
 	}
 
 	round, err := h.queries.GetRoundByID(ctx, roundID)
 	if err != nil {
-		InternalServerError(c, "round not found")
+		NotFound(c, "round not found")
 		return
 	}
 
-	if round.Status != "pending" {
-		BadRequest(c, "round already completed")
+	if round.QuestionID.Valid {
+		BadRequest(c, "question already set")
 		return
 	}
 
-	// 🎲 抽鬼牌（1/3 機率）
-	isJoker := rand.Intn(3) == 0
-
-	newStatus := "done"
-	if isJoker {
-		newStatus = "revealed"
+	// 驗證題目存在
+	question, err := h.queries.GetQuestionByID(ctx, req.QuestionID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			BadRequest(c, "question not found")
+		} else {
+			InternalServerError(c, "get question failed")
+		}
+		return
 	}
 
-	err = h.queries.UpdateRoundStatus(ctx, database.UpdateRoundStatusParams{
-		ID: round.ID,
-		IsJoker: pgtype.Bool{
-			Bool:  isJoker,
-			Valid: true,
-		},
-		Status: newStatus,
+	// 更新 round 的 question_id
+	err = h.queries.SetRoundQuestionID(ctx, database.SetRoundQuestionIDParams{
+		ID:         roundID,
+		QuestionID: pgtype.Int8{Int64: req.QuestionID, Valid: true},
 	})
 	if err != nil {
-		InternalServerError(c, "failed to update round")
+		InternalServerError(c, "update round failed")
 		return
 	}
 
-	question, err := h.queries.GetQuestionByID(ctx, round.QuestionID)
+	// 私訊題目內容給回答者
+	h.hub.SendToPlayer(game.Code, round.AnswerPlayerID.Int64, ws.WebSocketMessage{
+		Type: "round_question",
+		Data: gin.H{
+			"question": question,
+		},
+	})
+
+	Success(c, gin.H{"message": "question set"})
+}
+
+type SubmitAnswerRequest struct {
+	Answer string `json:"answer" binding:"required"`
+}
+
+func (h *RoundsHandler) SubmitAnswer(c *gin.Context) {
+	ctx := c.Request.Context()
+	code := c.Param("code")
+	roundIDStr := c.Param("id")
+	roundID, err := strconv.ParseInt(roundIDStr, 10, 64)
 	if err != nil {
-		InternalServerError(c, "failed to get question")
+		BadRequest(c, "invalid round id")
 		return
 	}
 
+	game, err := h.queries.GetGameByCode(ctx, code)
+	if err != nil {
+		NotFound(c, "game not found")
+		return
+	}
+
+	var req SubmitAnswerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequest(c, "invalid answer")
+		return
+	}
+
+	// 確認 round 是否存在
+	round, err := h.queries.GetRoundByID(ctx, roundID)
+	if err != nil {
+		NotFound(c, "round not found")
+		return
+	}
+
+	// 更新 answer 欄位
+	err = h.queries.SetRoundAnswer(ctx, database.SetRoundAnswerParams{
+		ID:     roundID,
+		Answer: pgtype.Text{String: req.Answer, Valid: true},
+	})
+	if err != nil {
+		InternalServerError(c, "update answer failed")
+		return
+	}
+
+	question, err := h.queries.GetQuestionByID(ctx, round.QuestionID.Int64)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			NotFound(c, "question not found")
+		} else {
+			InternalServerError(c, "failed to load question")
+		}
+		return
+	}
+
+	// 廣播題目與答案
+	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
+		Type: "answer_submitted",
+		Data: gin.H{
+			"roundId":  roundID,
+			"answer":   req.Answer,
+			"question": question,
+		},
+	})
+
+	Success(c, gin.H{"message": "answer submitted"})
+}
+
+func (h *RoundsHandler) DrawCard(c *gin.Context) {
+	ctx := c.Request.Context()
+	code := c.Param("code")
+	roundID, err := utils.ParseID(c.Param("id"))
+	if err != nil {
+		BadRequest(c, "invalid round id")
+		return
+	}
+
+	var req struct {
+		Index    int   `json:"index"`
+		PlayerID int64 `json:"playerId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequest(c, "invalid input")
+		return
+	}
+
+	// 取得 game + round
+	game, err := h.queries.GetGameByCode(ctx, code)
+	if err != nil {
+		NotFound(c, "game not found")
+		return
+	}
+
+	round, err := h.queries.GetRoundByID(ctx, roundID)
+	if err != nil {
+		NotFound(c, "round not found")
+		return
+	}
+
+	// ✅ 驗證是該輪的回答者
+	if !round.AnswerPlayerID.Valid || round.AnswerPlayerID.Int64 != req.PlayerID {
+		Forbidden(c, "not your turn to draw")
+		return
+	}
+
+	// ✅ 驗證 index 合法
+	if req.Index < 0 || req.Index >= len(round.Deck) {
+		BadRequest(c, "invalid card index")
+		return
+	}
+
+	// ✅ 判斷是否中 joker
+	isJoker := round.Deck[req.Index] == "joker"
+
+	// ✅ 更新 round 狀態為 done + 是否 joker
+	err = h.queries.CompleteRound(ctx, database.CompleteRoundParams{
+		ID:      round.ID,
+		Status:  "revealed",
+		IsJoker: pgtype.Bool{Bool: isJoker, Valid: true},
+	})
+	if err != nil {
+		InternalServerError(c, "update round failed")
+		return
+	}
+
+	// ✅ 撈出題目內容
+	var questionContent string
+	if round.QuestionID.Valid {
+		q, err := h.queries.GetQuestionByID(ctx, round.QuestionID.Int64)
+		if err == nil {
+			questionContent = q
+		}
+	}
+
+	// ✅ 廣播
 	if isJoker {
-		// 👻 廣播給所有人：顯示題目
 		h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 			Type: "joker_revealed",
 			Data: gin.H{
 				"roundId":  round.ID,
-				"playerId": round.CurrentPlayerID,
-				"question": question,
+				"playerId": req.PlayerID,
+				"question": questionContent,
+				"answer":   round.Answer.String,
 			},
 		})
 	} else {
-		// 🛡 廣播回合結束（安全）
 		h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 			Type: "player_safe",
 			Data: gin.H{
 				"roundId":  round.ID,
-				"playerId": round.CurrentPlayerID,
+				"playerId": req.PlayerID,
 			},
 		})
 	}
 
-	c.Status(http.StatusOK)
+	// ✅ 回傳結果
+	Success(c, gin.H{
+		"isJoker": isJoker,
+	})
 }
 
 func (h *RoundsHandler) CreateNextRound(c *gin.Context) {
 	ctx := c.Request.Context()
-	gameCode := c.Param("code")
+	code := c.Param("code")
 
-	game, err := h.queries.GetGameByCode(ctx, gameCode)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			NotFound(c, "game not found")
-			return
-		}
-		InternalServerError(c, "db error")
+	var req struct {
+		HostID         int64 `json:"hostId"`
+		CurrentRoundID int64 `json:"currentRoundId"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequest(c, "invalid input")
 		return
 	}
 
+	// 取得遊戲
+	game, err := h.queries.GetGameByCode(ctx, code)
+	if err != nil {
+		NotFound(c, "game not found")
+		return
+	}
+
+	// 驗證 host 身分
+	host, err := h.queries.GetPlayerByID(ctx, req.HostID)
+	if err != nil || host.GameID != game.ID || !host.IsHost.Bool {
+		Forbidden(c, "not a valid host")
+		return
+	}
+
+	// 取得當前 round
+	prevRound, err := h.queries.GetRoundByID(ctx, req.CurrentRoundID)
+	if err != nil {
+		NotFound(c, "previous round not found")
+		return
+	}
+
+	// 取得該房所有玩家，按 joined_at 排序
 	players, err := h.queries.ListPlayersByGameCode(ctx, game.Code)
-	if err != nil || len(players) == 0 {
-		InternalServerError(c, "failed to get players")
+	if err != nil || len(players) < 2 {
+		InternalServerError(c, "not enough players")
 		return
 	}
 
-	lastRound, err := h.queries.GetLatestRoundInGame(ctx, game.ID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		InternalServerError(c, "failed to get last round")
-		return
-	}
-
-	// 決定下一位玩家
-	nextPlayerID := players[0].ID
-	if lastRound.ID != 0 {
-		for i, p := range players {
-			if p.ID == lastRound.CurrentPlayerID {
-				nextPlayerID = players[(i+1)%len(players)].ID
-				break
-			}
+	// 找出下一位回答者
+	var nextPlayerID int64
+	for i, p := range players {
+		if p.ID == prevRound.AnswerPlayerID.Int64 {
+			nextPlayerID = players[(i+1)%len(players)].ID
+			break
 		}
 	}
 
-	question, err := h.queries.GetRandomQuestionByLevel(ctx, game.Level)
-	if err != nil {
-		InternalServerError(c, "failed to get question")
-		return
-	}
-
+	// 建立新 round
+	deck := utils.CreateShuffledDeck(1, 3)
 	round, err := h.queries.CreateRound(ctx, database.CreateRoundParams{
-		GameID:          game.ID,
-		QuestionID:      question.ID,
-		CurrentPlayerID: nextPlayerID,
+		GameID:           game.ID,
+		QuestionPlayerID: prevRound.AnswerPlayerID.Int64,
+		AnswerPlayerID:   pgtype.Int8{Int64: nextPlayerID, Valid: true},
+		Deck:             deck,
 	})
 	if err != nil {
-		InternalServerError(c, "failed to create round")
+		InternalServerError(c, "failed to create next round")
 		return
 	}
 
-	// 廣播回合開始（不含題目）
+	// 標記前一輪為 done
+	_ = h.queries.FinishRound(ctx, req.CurrentRoundID)
+
+	// 廣播下一輪開始
 	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 		Type: "round_started",
 		Data: gin.H{
-			"roundId":  round.ID,
-			"playerId": nextPlayerID,
+			"roundId":          round.ID,
+			"questionPlayerId": round.QuestionPlayerID,
+			"answerPlayerId":   round.AnswerPlayerID.Int64,
 		},
 	})
 
-	// 私訊題目給當事人
-	h.hub.SendToPlayer(game.Code, nextPlayerID, ws.WebSocketMessage{
-		Type: "round_question",
-		Data: gin.H{
-			"question": question.Content,
-		},
+	Success(c, gin.H{
+		"roundId":          round.ID,
+		"questionPlayerId": round.QuestionPlayerID,
+		"answerPlayerId":   round.AnswerPlayerID.Int64,
 	})
-
-	c.JSON(http.StatusOK, gin.H{
-		"round_id":  round.ID,
-		"player_id": nextPlayerID,
-	})
-}
-
-func (h *RoundsHandler) EndGame(c *gin.Context) {
-	ctx := c.Request.Context()
-	gameCode := c.Param("code")
-
-	game, err := h.queries.GetGameByCode(ctx, gameCode)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			NotFound(c, "game not found")
-			return
-		}
-		InternalServerError(c, "db error")
-		return
-	}
-
-	err = h.queries.UpdateGameStatus(ctx, database.UpdateGameStatusParams{
-		ID:     game.ID,
-		Status: "ended",
-	})
-	if err != nil {
-		InternalServerError(c, "failed to end game")
-		return
-	}
-
-	// 廣播遊戲結束
-	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
-		Type: "game_ended",
-		Data: gin.H{
-			"game_id": game.ID,
-		},
-	})
-
-	c.Status(http.StatusOK)
 }

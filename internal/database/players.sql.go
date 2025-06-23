@@ -53,8 +53,10 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Cre
 	return i, err
 }
 
-const deletePlayer = `-- name: DeletePlayer :exec
-DELETE FROM players WHERE id = $1 AND game_id = $2
+const deletePlayer = `-- name: DeletePlayer :one
+DELETE FROM players 
+WHERE id = $1 AND game_id = $2
+RETURNING id, nickname
 `
 
 type DeletePlayerParams struct {
@@ -62,9 +64,48 @@ type DeletePlayerParams struct {
 	GameID int64
 }
 
-func (q *Queries) DeletePlayer(ctx context.Context, arg DeletePlayerParams) error {
-	_, err := q.db.Exec(ctx, deletePlayer, arg.ID, arg.GameID)
-	return err
+type DeletePlayerRow struct {
+	ID       int64
+	Nickname string
+}
+
+func (q *Queries) DeletePlayer(ctx context.Context, arg DeletePlayerParams) (DeletePlayerRow, error) {
+	row := q.db.QueryRow(ctx, deletePlayer, arg.ID, arg.GameID)
+	var i DeletePlayerRow
+	err := row.Scan(&i.ID, &i.Nickname)
+	return i, err
+}
+
+const getFirstPlayerInGame = `-- name: GetFirstPlayerInGame :one
+SELECT id FROM players
+WHERE game_id = $1
+ORDER BY joined_at ASC
+LIMIT 1
+`
+
+func (q *Queries) GetFirstPlayerInGame(ctx context.Context, gameID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, getFirstPlayerInGame, gameID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getPlayerByID = `-- name: GetPlayerByID :one
+SELECT id, game_id, nickname, is_host, joined_at FROM players
+WHERE id = $1
+`
+
+func (q *Queries) GetPlayerByID(ctx context.Context, id int64) (Player, error) {
+	row := q.db.QueryRow(ctx, getPlayerByID, id)
+	var i Player
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.Nickname,
+		&i.IsHost,
+		&i.JoinedAt,
+	)
+	return i, err
 }
 
 const listPlayersByGameCode = `-- name: ListPlayersByGameCode :many

@@ -60,7 +60,7 @@ func NewApplication() (*Application, error) {
 	go hub.Run()
 
 	// handler
-	gamesHandler := api.NewGamesHandler(queries, logger)
+	gamesHandler := api.NewGamesHandler(queries, logger, hub)
 	playersHandler := api.NewPlayersHandler(queries, logger, hub)
 	roundsHandler := api.NewRoundsHandler(queries, logger, hub)
 

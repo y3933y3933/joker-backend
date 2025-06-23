@@ -14,14 +14,33 @@ func SetRoutes(app *app.Application) *gin.Engine {
 	// games
 	games := router.Group("/api/games")
 	{
+
+		// 建立遊戲
 		games.POST("/", app.GamesHandler.CreateGame)
-		games.GET("/:code/players", app.PlayersHandler.ListPlayers)
-		games.GET("/:code/rounds/current", app.RoundsHandler.GetCurrentRound)
+		// 加入遊戲
 		games.POST("/:code/join", app.PlayersHandler.JoinGame)
-		games.POST("/:code/rounds", app.RoundsHandler.CreateRound)
+		// 查看所有玩家
+		games.GET("/:code/players", app.PlayersHandler.ListPlayers)
+
+		games.GET("/:code", app.GamesHandler.GetGame)
+
+		// 開始遊戲
+		games.POST("/:code/start", app.RoundsHandler.StartGame)
+
+		// 更新題目
+		games.POST("/:code/rounds/:id/question", app.RoundsHandler.SubmitQuestion)
+
+		// 更新回答
+		games.POST("/:code/rounds/:id/answer", app.RoundsHandler.SubmitAnswer)
+
+		// 抽牌
 		games.POST("/:code/rounds/:id/draw", app.RoundsHandler.DrawCard)
+
+		// 換下一輪
 		games.POST("/:code/rounds/next", app.RoundsHandler.CreateNextRound)
-		games.POST("/:code/end", app.RoundsHandler.EndGame)
+		// 遊戲結束
+		games.POST("/:code/end", app.GamesHandler.EndGame)
+		// 踢出玩家
 		games.DELETE("/:code/players/:player_id", app.RoundsHandler.RemovePlayer)
 
 	}

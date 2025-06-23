@@ -16,5 +16,19 @@ RETURNING id, nickname, is_host, joined_at;
 
 
 
--- name: DeletePlayer :exec
-DELETE FROM players WHERE id = $1 AND game_id = $2;
+-- name: DeletePlayer :one
+DELETE FROM players 
+WHERE id = $1 AND game_id = $2
+RETURNING id, nickname;
+
+
+-- name: GetFirstPlayerInGame :one
+SELECT id FROM players
+WHERE game_id = $1
+ORDER BY joined_at ASC
+LIMIT 1;
+
+
+-- name: GetPlayerByID :one
+SELECT id, game_id, nickname, is_host, joined_at FROM players
+WHERE id = $1;

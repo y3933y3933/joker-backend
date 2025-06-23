@@ -34,11 +34,14 @@ type Question struct {
 }
 
 type Round struct {
-	ID              int64
-	GameID          int64
-	QuestionID      int64
-	CurrentPlayerID int64
-	IsJoker         pgtype.Bool
-	Status          string
-	CreatedAt       pgtype.Timestamptz
+	ID               int64
+	GameID           int64
+	QuestionID       pgtype.Int8
+	QuestionPlayerID int64
+	IsJoker          pgtype.Bool
+	Status           string
+	CreatedAt        pgtype.Timestamptz
+	Answer           pgtype.Text
+	AnswerPlayerID   pgtype.Int8
+	Deck             []string
 }
