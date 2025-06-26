@@ -27,29 +27,6 @@ func NewRoundsHandler(queries *database.Queries, logger *slog.Logger, hub *ws.Hu
 	}
 }
 
-type CurrentPlayer struct {
-	ID       int64  `json:"id"`
-	Nickname string `json:"nickname"`
-}
-type CurrentRoundResponse struct {
-	RoundID          int64  `json:"roundId"`
-	Question         string `json:"question"`
-	GameID           int64  `json:"gameId"`
-	IsJoker          *bool  `json:"isJoker"`
-	Status           string `json:"status"`
-	QuestionPlayerID int64  `json:"questionPlayerId"`
-	AnswerPlayerID   int64  `json:"answerPlayerId"`
-}
-
-type CreateRoundRequest struct {
-	PlayerID int64 `json:"playerId" binding:"required"`
-}
-
-type CreateRoundResponse struct {
-	RoundID  int64 `json:"roundId"`
-	PlayerID int64 `json:"playerId"`
-}
-
 func (h *RoundsHandler) StartGame(c *gin.Context) {
 	ctx := c.Request.Context()
 	code := c.Param("code")
@@ -97,6 +74,7 @@ func (h *RoundsHandler) StartGame(c *gin.Context) {
 			"roundId":      round.ID,
 			"questionerId": questioner.ID,
 			"answererId":   answerer.ID,
+			"status":       round.Status,
 		},
 	})
 
@@ -165,6 +143,10 @@ func (h *RoundsHandler) SubmitQuestion(c *gin.Context) {
 		return
 	}
 
+	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
+		Type: "answer_time",
+	})
+
 	// 私訊題目內容給回答者
 	h.hub.SendToPlayer(game.Code, round.AnswerPlayerID.Int64, ws.WebSocketMessage{
 		Type: "round_question",
@@ -211,7 +193,7 @@ func (h *RoundsHandler) SubmitAnswer(c *gin.Context) {
 
 	// 更新 answer 欄位
 	err = h.queries.SetRoundAnswer(ctx, database.SetRoundAnswerParams{
-		ID:     roundID,
+		ID:     round.ID,
 		Answer: pgtype.Text{String: req.Answer, Valid: true},
 	})
 	if err != nil {
@@ -219,23 +201,23 @@ func (h *RoundsHandler) SubmitAnswer(c *gin.Context) {
 		return
 	}
 
-	question, err := h.queries.GetQuestionByID(ctx, round.QuestionID.Int64)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			NotFound(c, "question not found")
-		} else {
-			InternalServerError(c, "failed to load question")
-		}
-		return
-	}
+	// question, err := h.queries.GetQuestionByID(ctx, round.QuestionID.Int64)
+	// if err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		NotFound(c, "question not found")
+	// 	} else {
+	// 		InternalServerError(c, "failed to load question")
+	// 	}
+	// 	return
+	// }
 
 	// 廣播題目與答案
 	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 		Type: "answer_submitted",
 		Data: gin.H{
-			"roundId":  roundID,
-			"answer":   req.Answer,
-			"question": question,
+			"roundId": roundID,
+			"answer":  req.Answer,
+			// "question": question,
 		},
 	})
 
@@ -406,15 +388,65 @@ func (h *RoundsHandler) CreateNextRound(c *gin.Context) {
 	h.hub.BroadcastToGame(game.Code, ws.WebSocketMessage{
 		Type: "round_started",
 		Data: gin.H{
-			"roundId":          round.ID,
-			"questionPlayerId": round.QuestionPlayerID,
-			"answerPlayerId":   round.AnswerPlayerID.Int64,
+			"roundId":      round.ID,
+			"questionerId": round.QuestionPlayerID,
+			"answererId":   round.AnswerPlayerID.Int64,
 		},
 	})
 
 	Success(c, gin.H{
-		"roundId":          round.ID,
-		"questionPlayerId": round.QuestionPlayerID,
-		"answerPlayerId":   round.AnswerPlayerID.Int64,
+		"roundId":      round.ID,
+		"questionerId": round.QuestionPlayerID,
+		"answererId":   round.AnswerPlayerID.Int64,
 	})
+}
+
+func (h *GamesHandler) GetQuestions(c *gin.Context) {
+	ctx := c.Request.Context()
+	code := c.Param("code")
+
+	// 預設 limit 為 3 題
+	limitStr := c.DefaultQuery("limit", "3")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 3
+	}
+
+	game, err := h.queries.GetGameByCode(ctx, code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			NotFound(c, "game not found")
+		} else {
+			InternalServerError(c, "db error")
+		}
+		return
+	}
+
+	questions, err := h.queries.GetQuestionsByLevel(ctx, database.GetQuestionsByLevelParams{
+		Level: game.Level,
+		Limit: int32(limit),
+	})
+
+	if err != nil {
+		InternalServerError(c, "failed to get questions")
+		return
+	}
+
+	Success(c, transformToQuestionResponse(questions))
+}
+
+type QuestionResponse struct {
+	ID      int64  `json:"id"`
+	Content string `json:"content"`
+}
+
+func transformToQuestionResponse(questions []database.GetQuestionsByLevelRow) []QuestionResponse {
+	var questionResponses []QuestionResponse
+	for _, q := range questions {
+		questionResponses = append(questionResponses, QuestionResponse{
+			ID:      q.ID,
+			Content: q.Content,
+		})
+	}
+	return questionResponses
 }

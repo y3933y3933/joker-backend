@@ -43,6 +43,9 @@ func SetRoutes(app *app.Application) *gin.Engine {
 		// 踢出玩家
 		games.DELETE("/:code/players/:player_id", app.RoundsHandler.RemovePlayer)
 
+		// 選擇題目
+		games.GET("/:code/questions", app.GamesHandler.GetQuestions)
+
 	}
 
 	// ws

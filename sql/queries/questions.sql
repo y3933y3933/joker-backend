@@ -1,8 +1,9 @@
--- name: GetRandomQuestionByLevel :one
-SELECT id, content FROM questions
+-- name: GetQuestionsByLevel :many
+SELECT id, content
+FROM questions
 WHERE level = $1
 ORDER BY RANDOM()
-LIMIT 1;
+LIMIT $2;
 
 
 -- name: GetQuestionByID :one

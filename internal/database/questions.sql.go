@@ -21,21 +21,40 @@ func (q *Queries) GetQuestionByID(ctx context.Context, id int64) (string, error)
 	return content, err
 }
 
-const getRandomQuestionByLevel = `-- name: GetRandomQuestionByLevel :one
-SELECT id, content FROM questions
+const getQuestionsByLevel = `-- name: GetQuestionsByLevel :many
+SELECT id, content
+FROM questions
 WHERE level = $1
 ORDER BY RANDOM()
-LIMIT 1
+LIMIT $2
 `
 
-type GetRandomQuestionByLevelRow struct {
+type GetQuestionsByLevelParams struct {
+	Level string
+	Limit int32
+}
+
+type GetQuestionsByLevelRow struct {
 	ID      int64
 	Content string
 }
 
-func (q *Queries) GetRandomQuestionByLevel(ctx context.Context, level string) (GetRandomQuestionByLevelRow, error) {
-	row := q.db.QueryRow(ctx, getRandomQuestionByLevel, level)
-	var i GetRandomQuestionByLevelRow
-	err := row.Scan(&i.ID, &i.Content)
-	return i, err
+func (q *Queries) GetQuestionsByLevel(ctx context.Context, arg GetQuestionsByLevelParams) ([]GetQuestionsByLevelRow, error) {
+	rows, err := q.db.Query(ctx, getQuestionsByLevel, arg.Level, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetQuestionsByLevelRow
+	for rows.Next() {
+		var i GetQuestionsByLevelRow
+		if err := rows.Scan(&i.ID, &i.Content); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
