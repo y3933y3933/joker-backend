@@ -46,6 +46,9 @@ func SetRoutes(app *app.Application) *gin.Engine {
 		// 選擇題目
 		games.GET("/:code/questions", app.GamesHandler.GetQuestions)
 
+		// 獲得遊戲總結
+		games.GET("/:code/summary", app.GamesHandler.GetGameSummary)
+
 	}
 
 	// ws

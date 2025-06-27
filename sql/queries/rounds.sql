@@ -56,3 +56,21 @@ WHERE id = $1;
 UPDATE rounds
 SET status = 'done'
 WHERE id = $1;
+
+
+-- name: GetRoundSummaryByGameID :many
+SELECT
+  r.id AS round_id,
+  r.answer AS answer,
+  r.is_joker,
+  q.content AS question,
+  qp.id AS question_player_id,
+  qp.nickname AS question_player_nickname,
+  ap.id AS answer_player_id,
+  ap.nickname AS answer_player_nickname
+FROM rounds r
+JOIN questions q ON r.question_id = q.id
+JOIN players qp ON r.question_player_id = qp.id
+JOIN players ap ON r.answer_player_id = ap.id
+WHERE r.game_id = $1
+ORDER BY r.id ASC;

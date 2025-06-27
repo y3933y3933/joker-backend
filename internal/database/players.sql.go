@@ -108,6 +108,54 @@ func (q *Queries) GetPlayerByID(ctx context.Context, id int64) (Player, error) {
 	return i, err
 }
 
+const getPlayerStatsByGameID = `-- name: GetPlayerStatsByGameID :many
+SELECT
+  p.id AS player_id,
+  p.nickname,
+  COUNT(CASE WHEN r.question_player_id = p.id THEN 1 END) AS questions_asked,
+  COUNT(CASE WHEN r.answer_player_id = p.id THEN 1 END) AS questions_answered,
+  COUNT(CASE WHEN r.answer_player_id = p.id AND r.is_joker = TRUE THEN 1 END) AS joker_cards_drawn
+FROM players p
+LEFT JOIN rounds r ON r.game_id = p.game_id
+WHERE p.game_id = $1
+GROUP BY p.id, p.nickname
+ORDER BY p.id ASC
+`
+
+type GetPlayerStatsByGameIDRow struct {
+	PlayerID          int64
+	Nickname          string
+	QuestionsAsked    int64
+	QuestionsAnswered int64
+	JokerCardsDrawn   int64
+}
+
+func (q *Queries) GetPlayerStatsByGameID(ctx context.Context, gameID int64) ([]GetPlayerStatsByGameIDRow, error) {
+	rows, err := q.db.Query(ctx, getPlayerStatsByGameID, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPlayerStatsByGameIDRow
+	for rows.Next() {
+		var i GetPlayerStatsByGameIDRow
+		if err := rows.Scan(
+			&i.PlayerID,
+			&i.Nickname,
+			&i.QuestionsAsked,
+			&i.QuestionsAnswered,
+			&i.JokerCardsDrawn,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPlayersByGameCode = `-- name: ListPlayersByGameCode :many
 SELECT p.id, p.nickname, p.is_host, p.joined_at
 FROM players p

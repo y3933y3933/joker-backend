@@ -175,6 +175,64 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (Round, error) {
 	return i, err
 }
 
+const getRoundSummaryByGameID = `-- name: GetRoundSummaryByGameID :many
+SELECT
+  r.id AS round_id,
+  r.answer AS answer,
+  r.is_joker,
+  q.content AS question,
+  qp.id AS question_player_id,
+  qp.nickname AS question_player_nickname,
+  ap.id AS answer_player_id,
+  ap.nickname AS answer_player_nickname
+FROM rounds r
+JOIN questions q ON r.question_id = q.id
+JOIN players qp ON r.question_player_id = qp.id
+JOIN players ap ON r.answer_player_id = ap.id
+WHERE r.game_id = $1
+ORDER BY r.id ASC
+`
+
+type GetRoundSummaryByGameIDRow struct {
+	RoundID                int64
+	Answer                 pgtype.Text
+	IsJoker                pgtype.Bool
+	Question               string
+	QuestionPlayerID       int64
+	QuestionPlayerNickname string
+	AnswerPlayerID         int64
+	AnswerPlayerNickname   string
+}
+
+func (q *Queries) GetRoundSummaryByGameID(ctx context.Context, gameID int64) ([]GetRoundSummaryByGameIDRow, error) {
+	rows, err := q.db.Query(ctx, getRoundSummaryByGameID, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetRoundSummaryByGameIDRow
+	for rows.Next() {
+		var i GetRoundSummaryByGameIDRow
+		if err := rows.Scan(
+			&i.RoundID,
+			&i.Answer,
+			&i.IsJoker,
+			&i.Question,
+			&i.QuestionPlayerID,
+			&i.QuestionPlayerNickname,
+			&i.AnswerPlayerID,
+			&i.AnswerPlayerNickname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setRoundAnswer = `-- name: SetRoundAnswer :exec
 UPDATE rounds
 SET answer = $2

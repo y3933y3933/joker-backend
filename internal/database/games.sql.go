@@ -54,6 +54,30 @@ func (q *Queries) GetGameByCode(ctx context.Context, code string) (Game, error) 
 	return i, err
 }
 
+const getPlayerByGameCodeAndID = `-- name: GetPlayerByGameCodeAndID :one
+SELECT p.id, p.game_id, p.nickname, p.is_host, p.joined_at FROM players AS p 
+JOIN games AS g ON g.id = p.game_id
+WHERE g.code = $1 AND p.id = $2
+`
+
+type GetPlayerByGameCodeAndIDParams struct {
+	Code string
+	ID   int64
+}
+
+func (q *Queries) GetPlayerByGameCodeAndID(ctx context.Context, arg GetPlayerByGameCodeAndIDParams) (Player, error) {
+	row := q.db.QueryRow(ctx, getPlayerByGameCodeAndID, arg.Code, arg.ID)
+	var i Player
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.Nickname,
+		&i.IsHost,
+		&i.JoinedAt,
+	)
+	return i, err
+}
+
 const updateGameStatus = `-- name: UpdateGameStatus :exec
 UPDATE games SET status = $2 WHERE id = $1
 `
