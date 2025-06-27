@@ -24,7 +24,8 @@ confirm:
 ## run: run the application
 .PHONY: run
 run:
-	go run . -port=${PORT} -env=${ENV}
+	@echo 'Running application...'
+	go run . -port=${PORT} -env=${ENV} -db=${DB_URL}
 
 ## db/psql: connect to the database using psql
 .PHONY: db/psql

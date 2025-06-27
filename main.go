@@ -12,6 +12,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer app.DB.ConnPool.Close()
 
 	router := routes.SetupRoutes(app)
 	port := fmt.Sprintf(":%d", app.Config.Port)

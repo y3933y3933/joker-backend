@@ -7,29 +7,49 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/y3933y3933/joker/internal/db/sqlc"
+	"github.com/y3933y3933/joker/internal/store"
 )
 
 type config struct {
-	Port int
-	Env  string
+	Port   int
+	Env    string
+	DB_URL string
+}
+
+type db struct {
+	ConnPool *pgxpool.Pool
+	Queries  *sqlc.Queries
 }
 
 type Application struct {
 	Config config
 	Logger *slog.Logger
+	DB     *db
 }
 
 func NewApplication() (*Application, error) {
 	var cfg config
 	flag.IntVar(&cfg.Port, "port", 8080, "API server port")
 	flag.StringVar(&cfg.Env, "env", "dev", "Environment (dev|prod)")
+	flag.StringVar(&cfg.DB_URL, "db", "", "database url")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	pgDB, queries, err := store.Open(cfg.DB_URL)
+	if err != nil {
+		return nil, err
+	}
+
 	app := &Application{
 		Config: cfg,
 		Logger: logger,
+		DB: &db{
+			ConnPool: pgDB,
+			Queries:  queries,
+		},
 	}
 	return app, nil
 }
