@@ -45,6 +45,11 @@ db/migrations/new:
 	go tool goose -dir ./migrations -s create $(name) sql
 
 
+## sqlc/gen: generate Go code from SQL queries
+.PHONY: sqlc/gen
+sqlc/gen:
+	@echo 'Generating code from SQLC...'
+	go tool sqlc generate
 
 
 # ==================================================================================== # 
