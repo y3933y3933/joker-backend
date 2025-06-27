@@ -35,7 +35,7 @@ db/psql:
 .PHONY: db/migrations/up
 db/migrations/up: confirm
 	@echo 'Running up migrations...'
-	go tool goose -dir ./sql/migrations postgres $(DB_URL) up
+	go tool goose -dir ./migrations postgres $(DB_URL) up
 
 
 ## db/migrations/new name=$1: create a new database migration
@@ -43,7 +43,6 @@ db/migrations/up: confirm
 db/migrations/new: 
 	@echo 'Creating migration files for ${name}...'
 	go tool goose -dir ./migrations -s create $(name) sql
-
 
 
 
