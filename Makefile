@@ -24,7 +24,7 @@ confirm:
 ## run: run the application
 .PHONY: run
 run:
-	go run .
+	go run . -port=${PORT} -env=${ENV}
 
 ## db/psql: connect to the database using psql
 .PHONY: db/psql
@@ -43,6 +43,7 @@ db/migrations/up:
 db/migrations/new: confirm
 	@echo 'Creating migration files for ${name}...'
 	goose -dir ./sql/migrations -s create $(name) sql
+
 
 
 
