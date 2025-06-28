@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/y3933y3933/joker/internal/service"
+	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/errx"
 )
 
@@ -32,19 +33,22 @@ func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 		return
 	}
 
-	code := c.Param("code")
-	if code == "" {
-		BadRequestResponse(c, errors.New("invalid code"))
+	gameAny, ok := c.Get("game")
+	if !ok {
+		ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
 		return
 	}
 
-	player, err := h.playerService.JoinGame(c.Request.Context(), code, req.Nickname)
+	game := gameAny.(*store.Game)
+
+	player, err := h.playerService.JoinGame(c.Request.Context(), game.Code, req.Nickname)
 	if err != nil {
 		if errors.Is(err, errx.ErrGameNotFound) {
 			BadRequestResponse(c, errors.New("game not found"))
 			return
 		}
 		ServerErrorResponse(c, h.logger, err)
+		return
 	}
 
 	SuccessResponse(c, player)

@@ -3,21 +3,20 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/y3933y3933/joker/internal/app"
+	"github.com/y3933y3933/joker/internal/middleware"
 )
 
 func SetupRoutes(app *app.Application) *gin.Engine {
 	router := gin.Default()
 
-	api := router.Group("/api")
-	{
-		api.GET("/healthz", app.HealthCheck)
-	}
+	router.GET("/api/healthz", app.HealthCheck)
 
-	games := api.Group("/games")
+	// games
+	games := router.Group("/api/games")
+	games.POST("/", app.GameHandler.HandleCreateGame)
+	codes := games.Group("/:code", middleware.ValidateGameExists(app.GameStore))
 	{
-		games.POST("/", app.GameHandler.HandleCreateGame)
-		games.POST("/:code/join", app.PlayerHandler.HandleJoinGame)
-
+		codes.POST("/join", app.PlayerHandler.HandleJoinGame)
 	}
 
 	// ws

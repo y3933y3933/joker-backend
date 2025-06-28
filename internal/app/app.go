@@ -31,6 +31,7 @@ type Application struct {
 	Logger        *slog.Logger
 	DB            *db
 	GameHandler   *api.GameHandler
+	GameStore     *store.PostgresGameStore
 	PlayerHandler *api.PlayerHandler
 	WSHandler     *ws.Handler
 }
@@ -73,6 +74,7 @@ func NewApplication() (*Application, error) {
 			Queries:  queries,
 		},
 		GameHandler:   gameHandler,
+		GameStore:     gameStore,
 		PlayerHandler: playerHandler,
 		WSHandler:     wsHandler,
 	}
