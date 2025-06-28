@@ -18,5 +18,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		games.POST("/", app.GameHandler.HandleCreateGame)
 	}
 
+	// ws
+	router.GET("/ws/games/:code", app.WSHandler.ServeWS)
+
 	return router
 }

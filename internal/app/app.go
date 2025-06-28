@@ -12,6 +12,7 @@ import (
 	"github.com/y3933y3933/joker/internal/db/sqlc"
 	"github.com/y3933y3933/joker/internal/service"
 	"github.com/y3933y3933/joker/internal/store"
+	"github.com/y3933y3933/joker/internal/ws"
 )
 
 type config struct {
@@ -30,6 +31,7 @@ type Application struct {
 	Logger      *slog.Logger
 	DB          *db
 	GameHandler *api.GameHandler
+	WSHandler   *ws.Handler
 }
 
 func NewApplication() (*Application, error) {
@@ -55,6 +57,10 @@ func NewApplication() (*Application, error) {
 	// handler
 	gameHandler := api.NewGameHandler(*gameService, logger)
 
+	// ws
+	hub := ws.NewHub()
+	wsHandler := ws.NewHandler(hub, logger)
+
 	app := &Application{
 		Config: cfg,
 		Logger: logger,
@@ -63,6 +69,7 @@ func NewApplication() (*Application, error) {
 			Queries:  queries,
 		},
 		GameHandler: gameHandler,
+		WSHandler:   wsHandler,
 	}
 	return app, nil
 }

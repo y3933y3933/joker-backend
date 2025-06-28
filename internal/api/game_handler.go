@@ -22,8 +22,8 @@ func NewGameHandler(gameService service.GameService, logger *slog.Logger) *GameH
 func (h *GameHandler) HandleCreateGame(c *gin.Context) {
 	game, err := h.gameService.CreateGame()
 	if err != nil {
-		serverErrorResponse(c, h.logger, err)
+		ServerErrorResponse(c, h.logger, err)
 		return
 	}
-	successResponse(c, game)
+	SuccessResponse(c, game)
 }

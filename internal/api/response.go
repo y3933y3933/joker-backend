@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func serverErrorResponse(c *gin.Context, logger *slog.Logger, err error) {
+func ServerErrorResponse(c *gin.Context, logger *slog.Logger, err error) {
 	logger.Error(err.Error(), "method", c.Request.Method, "url", c.Request.URL)
 
 	message := "the server encountered a problem and could not process your request"
@@ -16,6 +16,6 @@ func serverErrorResponse(c *gin.Context, logger *slog.Logger, err error) {
 	})
 }
 
-func successResponse(c *gin.Context, data any) {
+func SuccessResponse(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
