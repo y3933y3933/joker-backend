@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/y3933y3933/joker/internal/api"
+	"github.com/y3933y3933/joker/internal/utils/httpx"
 )
 
 var upgrader = websocket.Upgrader{
@@ -35,7 +35,7 @@ func (h *Handler) ServeWS(c *gin.Context) {
 	playerIDStr := c.Query("player_id")
 	playerID, err := strconv.ParseInt(playerIDStr, 10, 64)
 	if err != nil {
-		api.ServerErrorResponse(c, h.Logger, errors.New("invalid player id"))
+		httpx.ServerErrorResponse(c, h.Logger, errors.New("invalid player id"))
 		return
 	}
 

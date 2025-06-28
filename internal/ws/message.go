@@ -23,3 +23,16 @@ type PlayerJoinedPayload struct {
 	Nickname string `json:"nickname"`
 	IsHost   bool   `json:"isHost"`
 }
+
+// NewWSMessage creates a new WSMessage from any data struct or map.
+func NewWSMessage(msgType string, data any) (WSMessage, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return WSMessage{}, err
+	}
+
+	return WSMessage{
+		Type: msgType,
+		Data: b,
+	}, nil
+}

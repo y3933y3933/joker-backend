@@ -5,8 +5,8 @@ import (
 	"regexp"
 
 	"github.com/gin-gonic/gin"
-	"github.com/y3933y3933/joker/internal/api"
 	"github.com/y3933y3933/joker/internal/store"
+	"github.com/y3933y3933/joker/internal/utils/httpx"
 )
 
 var codePattern = regexp.MustCompile(`^[A-Za-z0-9]{6}$`)
@@ -15,13 +15,13 @@ func ValidateGameExists(gameStore store.GameStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		if code == "" || !codePattern.MatchString(code) {
-			api.BadRequestResponse(c, errors.New("invalid game code"))
+			httpx.BadRequestResponse(c, errors.New("invalid game code"))
 			return
 		}
 
 		game, err := gameStore.GetGameByCode(c.Request.Context(), code)
 		if err != nil {
-			api.NotFoundResponse(c, errors.New("game not found"))
+			httpx.NotFoundResponse(c, errors.New("game not found"))
 			return
 		}
 

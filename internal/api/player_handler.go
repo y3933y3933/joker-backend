@@ -8,16 +8,20 @@ import (
 	"github.com/y3933y3933/joker/internal/service"
 	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/errx"
+	"github.com/y3933y3933/joker/internal/utils/httpx"
+	"github.com/y3933y3933/joker/internal/ws"
 )
 
 type PlayerHandler struct {
 	playerService service.PlayerService
+	hub           *ws.Hub
 	logger        *slog.Logger
 }
 
-func NewPlayerHandler(playerService service.PlayerService, logger *slog.Logger) *PlayerHandler {
+func NewPlayerHandler(playerService service.PlayerService, hub *ws.Hub, logger *slog.Logger) *PlayerHandler {
 	return &PlayerHandler{
 		playerService: playerService,
+		hub:           hub,
 		logger:        logger,
 	}
 }
@@ -29,13 +33,13 @@ type JoinGameRequest struct {
 func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 	var req JoinGameRequest
 	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
-		BadRequestResponse(c, err)
+		httpx.BadRequestResponse(c, err)
 		return
 	}
 
 	gameAny, ok := c.Get("game")
 	if !ok {
-		ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
 		return
 	}
 
@@ -44,13 +48,28 @@ func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 	player, err := h.playerService.JoinGame(c.Request.Context(), game.Code, req.Nickname)
 	if err != nil {
 		if errors.Is(err, errx.ErrGameNotFound) {
-			BadRequestResponse(c, errors.New("game not found"))
+			httpx.BadRequestResponse(c, errors.New("game not found"))
 			return
 		}
-		ServerErrorResponse(c, h.logger, err)
+		httpx.ServerErrorResponse(c, h.logger, err)
 		return
 	}
 
-	SuccessResponse(c, player)
+	// ✅ 推播 player_joined 給房間內所有人
+	room := h.hub.GetRoom(game.Code)
+	if room != nil {
+		msg, err := ws.NewWSMessage("player_joined", ws.PlayerJoinedPayload{
+			ID:       player.ID,
+			Nickname: player.Nickname,
+			IsHost:   player.IsHost,
+		})
+		if err != nil {
+			httpx.ServerErrorResponse(c, h.logger, err)
+			return
+		}
+		room.Broadcast(msg)
+	}
+
+	httpx.SuccessResponse(c, player)
 
 }

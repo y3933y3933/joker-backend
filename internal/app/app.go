@@ -50,6 +50,10 @@ func NewApplication() (*Application, error) {
 		return nil, err
 	}
 
+	// ws
+	hub := ws.NewHub()
+	wsHandler := ws.NewHandler(hub, logger)
+
 	// store
 	gameStore := store.NewPostgresGameStore(queries)
 	playerStore := store.NewPostgresPlayerStore(queries)
@@ -60,11 +64,7 @@ func NewApplication() (*Application, error) {
 
 	// handler
 	gameHandler := api.NewGameHandler(gameService, logger)
-	playerHandler := api.NewPlayerHandler(*playerService, logger)
-
-	// ws
-	hub := ws.NewHub()
-	wsHandler := ws.NewHandler(hub, logger)
+	playerHandler := api.NewPlayerHandler(*playerService, hub, logger)
 
 	app := &Application{
 		Config: cfg,
