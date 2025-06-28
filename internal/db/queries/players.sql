@@ -7,3 +7,8 @@ RETURNING id, game_id,nickname, is_host, joined_at;
 SELECT COUNT(*)
 FROM players
 WHERE game_id = $1;
+
+-- name: FindPlayersByGameID :many
+SELECT id, nickname, is_host, game_id
+FROM players
+WHERE game_id = $1;

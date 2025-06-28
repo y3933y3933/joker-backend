@@ -14,9 +14,11 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	// games
 	games := router.Group("/api/games")
 	games.POST("/", app.GameHandler.HandleCreateGame)
+
 	codes := games.Group("/:code", middleware.ValidateGameExists(app.GameStore))
 	{
 		codes.POST("/join", app.PlayerHandler.HandleJoinGame)
+		codes.GET("/players", app.PlayerHandler.HandleListPlayers)
 	}
 
 	// ws

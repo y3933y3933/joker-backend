@@ -18,12 +18,8 @@ func NewPlayerService(playerStore store.PlayerStore, gameStore store.GameStore) 
 	}
 }
 
-func (s *PlayerService) JoinGame(ctx context.Context, code, nickname string) (*store.Player, error) {
-	game, err := s.gameStore.GetGameByCode(ctx, code)
-	if err != nil {
-		return nil, err
-	}
-	count, err := s.playerStore.CountPlayerInGame(ctx, game.ID)
+func (s *PlayerService) JoinGame(ctx context.Context, gameID int64, nickname string) (*store.Player, error) {
+	count, err := s.playerStore.CountPlayerInGame(ctx, gameID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +28,7 @@ func (s *PlayerService) JoinGame(ctx context.Context, code, nickname string) (*s
 	args := &store.Player{
 		Nickname: nickname,
 		IsHost:   isHost,
-		GameID:   game.ID,
+		GameID:   gameID,
 	}
 	player, err := s.playerStore.Create(ctx, args)
 
@@ -42,4 +38,8 @@ func (s *PlayerService) JoinGame(ctx context.Context, code, nickname string) (*s
 
 	return player, nil
 
+}
+
+func (s *PlayerService) ListPlayersInGame(ctx context.Context, gameID int64) ([]*store.Player, error) {
+	return s.playerStore.FindPlayersByGameID(ctx, gameID)
 }

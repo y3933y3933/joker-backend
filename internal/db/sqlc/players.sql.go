@@ -48,3 +48,41 @@ func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Pla
 	)
 	return i, err
 }
+
+const findPlayersByGameID = `-- name: FindPlayersByGameID :many
+SELECT id, nickname, is_host, game_id
+FROM players
+WHERE game_id = $1
+`
+
+type FindPlayersByGameIDRow struct {
+	ID       int64
+	Nickname string
+	IsHost   pgtype.Bool
+	GameID   int64
+}
+
+func (q *Queries) FindPlayersByGameID(ctx context.Context, gameID int64) ([]FindPlayersByGameIDRow, error) {
+	rows, err := q.db.Query(ctx, findPlayersByGameID, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindPlayersByGameIDRow
+	for rows.Next() {
+		var i FindPlayersByGameIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nickname,
+			&i.IsHost,
+			&i.GameID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

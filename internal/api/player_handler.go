@@ -45,7 +45,7 @@ func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 
 	game := gameAny.(*store.Game)
 
-	player, err := h.playerService.JoinGame(c.Request.Context(), game.Code, req.Nickname)
+	player, err := h.playerService.JoinGame(c.Request.Context(), game.ID, req.Nickname)
 	if err != nil {
 		if errors.Is(err, errx.ErrGameNotFound) {
 			httpx.BadRequestResponse(c, errors.New("game not found"))
@@ -72,4 +72,21 @@ func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 
 	httpx.SuccessResponse(c, player)
 
+}
+
+func (h *PlayerHandler) HandleListPlayers(c *gin.Context) {
+	gameAny, ok := c.Get("game")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
+		return
+	}
+	game := gameAny.(*store.Game)
+
+	players, err := h.playerService.ListPlayersInGame(c.Request.Context(), game.ID)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, players)
 }

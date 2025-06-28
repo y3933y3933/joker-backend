@@ -25,6 +25,7 @@ func NewPostgresPlayerStore(queries *sqlc.Queries) *PostgresPlayerStore {
 type PlayerStore interface {
 	Create(ctx context.Context, player *Player) (*Player, error)
 	CountPlayerInGame(ctx context.Context, gameID int64) (int64, error)
+	FindPlayersByGameID(ctx context.Context, gameID int64) ([]*Player, error)
 }
 
 func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Player, error) {
@@ -54,4 +55,22 @@ func (pg *PostgresPlayerStore) CountPlayerInGame(ctx context.Context, gameID int
 		return 0, err
 	}
 	return count, nil
+}
+
+func (pg *PostgresPlayerStore) FindPlayersByGameID(ctx context.Context, gameID int64) ([]*Player, error) {
+	dbPlayers, err := pg.queries.FindPlayersByGameID(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+
+	players := make([]*Player, 0, len(dbPlayers))
+	for _, p := range dbPlayers {
+		players = append(players, &Player{
+			ID:       p.ID,
+			Nickname: p.Nickname,
+			IsHost:   p.IsHost.Bool,
+			GameID:   p.GameID,
+		})
+	}
+	return players, nil
 }
