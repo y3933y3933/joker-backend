@@ -8,7 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/y3933y3933/joker/internal/api"
 	"github.com/y3933y3933/joker/internal/db/sqlc"
+	"github.com/y3933y3933/joker/internal/service"
 	"github.com/y3933y3933/joker/internal/store"
 )
 
@@ -24,9 +26,10 @@ type db struct {
 }
 
 type Application struct {
-	Config config
-	Logger *slog.Logger
-	DB     *db
+	Config      config
+	Logger      *slog.Logger
+	DB          *db
+	GameHandler *api.GameHandler
 }
 
 func NewApplication() (*Application, error) {
@@ -43,6 +46,15 @@ func NewApplication() (*Application, error) {
 		return nil, err
 	}
 
+	// store
+	gameStore := store.NewPostgresGameStore(queries)
+
+	// service
+	gameService := service.NewGameService(gameStore)
+
+	// handler
+	gameHandler := api.NewGameHandler(*gameService, logger)
+
 	app := &Application{
 		Config: cfg,
 		Logger: logger,
@@ -50,6 +62,7 @@ func NewApplication() (*Application, error) {
 			ConnPool: pgDB,
 			Queries:  queries,
 		},
+		GameHandler: gameHandler,
 	}
 	return app, nil
 }

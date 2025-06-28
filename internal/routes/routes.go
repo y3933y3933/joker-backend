@@ -13,5 +13,10 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		api.GET("/healthz", app.HealthCheck)
 	}
 
+	games := api.Group("/games")
+	{
+		games.POST("/", app.GameHandler.HandleCreateGame)
+	}
+
 	return router
 }
