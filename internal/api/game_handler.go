@@ -8,11 +8,11 @@ import (
 )
 
 type GameHandler struct {
-	gameService service.GameService
+	gameService *service.GameService
 	logger      *slog.Logger
 }
 
-func NewGameHandler(gameService service.GameService, logger *slog.Logger) *GameHandler {
+func NewGameHandler(gameService *service.GameService, logger *slog.Logger) *GameHandler {
 	return &GameHandler{
 		gameService: gameService,
 		logger:      logger,
@@ -20,7 +20,7 @@ func NewGameHandler(gameService service.GameService, logger *slog.Logger) *GameH
 }
 
 func (h *GameHandler) HandleCreateGame(c *gin.Context) {
-	game, err := h.gameService.CreateGame()
+	game, err := h.gameService.CreateGame(c.Request.Context())
 	if err != nil {
 		ServerErrorResponse(c, h.logger, err)
 		return

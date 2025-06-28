@@ -6,6 +6,7 @@ import (
 	"errors"
 
 	"github.com/y3933y3933/joker/internal/db/sqlc"
+	"github.com/y3933y3933/joker/internal/utils/errx"
 )
 
 type Game struct {
@@ -29,12 +30,12 @@ func NewPostgresGameStore(queries *sqlc.Queries) *PostgresGameStore {
 }
 
 type GameStore interface {
-	Create(*Game) (*Game, error)
-	GameCodeExists(code string) (bool, error)
+	Create(context.Context, *Game) (*Game, error)
+	GameCodeExists(ctx context.Context, code string) (bool, error)
+	GetGameByCode(ctx context.Context, code string) (*Game, error)
 }
 
-func (pg *PostgresGameStore) Create(game *Game) (*Game, error) {
-	ctx := context.Background()
+func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
 	args := sqlc.CreateGameParams{
 		Code:   game.Code,
 		Status: game.Status,
@@ -47,8 +48,7 @@ func (pg *PostgresGameStore) Create(game *Game) (*Game, error) {
 	return &Game{ID: row.ID, Code: game.Code, Status: game.Status}, nil
 }
 
-func (pg *PostgresGameStore) GameCodeExists(code string) (bool, error) {
-	ctx := context.Background()
+func (pg *PostgresGameStore) GameCodeExists(ctx context.Context, code string) (bool, error) {
 	_, err := pg.queries.GetGameByCode(ctx, code)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -59,4 +59,20 @@ func (pg *PostgresGameStore) GameCodeExists(code string) (bool, error) {
 
 	return true, nil
 
+}
+
+func (pg *PostgresGameStore) GetGameByCode(ctx context.Context, code string) (*Game, error) {
+	game, err := pg.queries.GetGameByCode(ctx, code)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errx.ErrGameNotFound
+		}
+		return nil, err
+	}
+
+	return &Game{
+		ID:     game.ID,
+		Code:   game.Code,
+		Status: game.Status,
+	}, nil
 }

@@ -27,11 +27,12 @@ type db struct {
 }
 
 type Application struct {
-	Config      config
-	Logger      *slog.Logger
-	DB          *db
-	GameHandler *api.GameHandler
-	WSHandler   *ws.Handler
+	Config        config
+	Logger        *slog.Logger
+	DB            *db
+	GameHandler   *api.GameHandler
+	PlayerHandler *api.PlayerHandler
+	WSHandler     *ws.Handler
 }
 
 func NewApplication() (*Application, error) {
@@ -50,12 +51,15 @@ func NewApplication() (*Application, error) {
 
 	// store
 	gameStore := store.NewPostgresGameStore(queries)
+	playerStore := store.NewPostgresPlayerStore(queries)
 
 	// service
 	gameService := service.NewGameService(gameStore)
+	playerService := service.NewPlayerService(playerStore, gameStore)
 
 	// handler
-	gameHandler := api.NewGameHandler(*gameService, logger)
+	gameHandler := api.NewGameHandler(gameService, logger)
+	playerHandler := api.NewPlayerHandler(*playerService, logger)
 
 	// ws
 	hub := ws.NewHub()
@@ -68,8 +72,9 @@ func NewApplication() (*Application, error) {
 			ConnPool: pgDB,
 			Queries:  queries,
 		},
-		GameHandler: gameHandler,
-		WSHandler:   wsHandler,
+		GameHandler:   gameHandler,
+		PlayerHandler: playerHandler,
+		WSHandler:     wsHandler,
 	}
 	return app, nil
 }

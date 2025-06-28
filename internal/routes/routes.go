@@ -16,6 +16,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	games := api.Group("/games")
 	{
 		games.POST("/", app.GameHandler.HandleCreateGame)
+		games.POST("/:code/join", app.PlayerHandler.HandleJoinGame)
+
 	}
 
 	// ws

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/y3933y3933/joker/internal/store"
@@ -18,12 +19,12 @@ func NewGameService(gameStore store.GameStore) *GameService {
 	}
 }
 
-func (s *GameService) generateCode() (string, error) {
+func (s *GameService) generateCode(ctx context.Context) (string, error) {
 	const maxTries = 10
 
 	for i := 0; i < maxTries; i++ {
 		code := codegen.GenerateCode(6)
-		exists, err := s.gameStore.GameCodeExists(code)
+		exists, err := s.gameStore.GameCodeExists(ctx, code)
 		if err != nil {
 			return "", fmt.Errorf("check game code: %w", err)
 		}
@@ -35,8 +36,8 @@ func (s *GameService) generateCode() (string, error) {
 	return "", errx.ErrGenerateCode
 }
 
-func (s *GameService) CreateGame() (*store.Game, error) {
-	code, err := s.generateCode()
+func (s *GameService) CreateGame(ctx context.Context) (*store.Game, error) {
+	code, err := s.generateCode(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func (s *GameService) CreateGame() (*store.Game, error) {
 		Code:   code,
 		Status: store.GameStatusWaiting,
 	}
-	game, err := s.gameStore.Create(args)
+	game, err := s.gameStore.Create(ctx, args)
 	if err != nil {
 		return nil, err
 	}

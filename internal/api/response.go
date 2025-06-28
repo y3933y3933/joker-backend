@@ -16,6 +16,10 @@ func ServerErrorResponse(c *gin.Context, logger *slog.Logger, err error) {
 	})
 }
 
+func BadRequestResponse(c *gin.Context, err error) {
+	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+}
+
 func SuccessResponse(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
