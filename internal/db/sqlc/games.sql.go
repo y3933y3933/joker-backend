@@ -41,6 +41,18 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (CreateG
 	return i, err
 }
 
+const endGame = `-- name: EndGame :exec
+UPDATE games
+SET status = 'ended',
+    updated_at = NOW()
+WHERE code = $1
+`
+
+func (q *Queries) EndGame(ctx context.Context, code string) error {
+	_, err := q.db.Exec(ctx, endGame, code)
+	return err
+}
+
 const getGameByCode = `-- name: GetGameByCode :one
 SELECT id, code , status, created_at, updated_at 
 FROM games

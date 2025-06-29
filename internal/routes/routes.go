@@ -28,6 +28,9 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		// 取得隨機題目
 		codes.GET("/questions", app.GameHandler.HandleGetQuestions)
 
+		// 結束遊戲
+		codes.POST("/end", app.GameHandler.HandleEndGame)
+
 		rounds := codes.Group("/rounds", middleware.WithPlayerID())
 		{
 			// 更新題目

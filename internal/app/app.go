@@ -68,7 +68,7 @@ func NewApplication() (*Application, error) {
 	questionService := service.NewQuestionService(questionStore)
 
 	// handler
-	gameHandler := api.NewGameHandler(gameService, questionService, logger)
+	gameHandler := api.NewGameHandler(gameService, questionService, hub, logger)
 	playerHandler := api.NewPlayerHandler(playerService, hub, logger)
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
 

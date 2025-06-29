@@ -53,3 +53,11 @@ func (s *GameService) CreateGame(ctx context.Context) (*store.Game, error) {
 
 	return game, nil
 }
+
+func (s *GameService) EndGame(ctx context.Context, code string, status string) error {
+	if status == store.GameStatusEnded {
+		return errx.ErrInvalidGameStatus
+	}
+
+	return s.gameStore.EndGame(ctx, code)
+}

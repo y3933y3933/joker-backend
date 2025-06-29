@@ -1,24 +1,30 @@
 package api
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/y3933y3933/joker/internal/service"
+	"github.com/y3933y3933/joker/internal/store"
+	"github.com/y3933y3933/joker/internal/utils/errx"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
+	"github.com/y3933y3933/joker/internal/ws"
 )
 
 type GameHandler struct {
 	gameService     *service.GameService
 	questionService *service.QuestionService
+	hub             *ws.Hub
 	logger          *slog.Logger
 }
 
-func NewGameHandler(gameService *service.GameService, questionService *service.QuestionService, logger *slog.Logger) *GameHandler {
+func NewGameHandler(gameService *service.GameService, questionService *service.QuestionService, hub *ws.Hub, logger *slog.Logger) *GameHandler {
 	return &GameHandler{
 		gameService:     gameService,
 		questionService: questionService,
+		hub:             hub,
 		logger:          logger,
 	}
 }
@@ -46,4 +52,31 @@ func (h *GameHandler) HandleGetQuestions(c *gin.Context) {
 	}
 
 	httpx.SuccessResponse(c, questions)
+}
+
+func (h *GameHandler) HandleEndGame(c *gin.Context) {
+	gameAny, exists := c.Get("game")
+	if !exists {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
+		return
+	}
+	game := gameAny.(*store.Game)
+
+	err := h.gameService.EndGame(c.Request.Context(), game.Code, game.Status)
+	if err != nil {
+		if errors.Is(err, errx.ErrInvalidGameStatus) {
+			httpx.BadRequestResponse(c, err)
+			return
+		}
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	// 推播 game_ended 給所有人（若有 hub）
+	if room := h.hub.GetRoom(game.Code); room != nil {
+		msg, _ := ws.NewWSMessage(ws.MsgTypeGameEnded, gin.H{"gameCode": game.Code})
+		room.Broadcast(msg)
+	}
+
+	httpx.SuccessResponse(c, gin.H{"message": "game ended"})
 }
