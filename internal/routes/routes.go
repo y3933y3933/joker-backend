@@ -28,6 +28,9 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		// 取得隨機題目
 		codes.GET("/questions", app.GameHandler.HandleGetQuestions)
 
+		// 更新題目
+		codes.POST("/rounds/:id/question", app.RoundHandler.HandleSubmitQuestion)
+
 	}
 	// ws
 	router.GET("/ws/games/:code", app.WSHandler.ServeWS)

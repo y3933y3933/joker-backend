@@ -37,3 +37,10 @@ func fromPgBool(p pgtype.Bool) bool {
 
 	return p.Bool
 }
+
+func fromPgInt8(p pgtype.Int8) *int64 {
+	if !p.Valid {
+		return nil
+	}
+	return &p.Int64
+}

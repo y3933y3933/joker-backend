@@ -9,3 +9,10 @@ var (
 	ErrInvalidGameStatus = errors.New("invalid game status")
 	ErrNotEnoughPlayers  = errors.New("not enough players")
 )
+
+// 回合相關錯誤
+var (
+	ErrRoundNotFound = errors.New("round not found")
+	ErrInvalidStatus = errors.New("invalid round status")
+	ErrForbidden     = errors.New("you are not allowed to perform this action")
+)

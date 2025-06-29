@@ -90,3 +90,28 @@ func generateDeck(n int) []string {
 
 	return deck
 }
+
+func (s *RoundService) SubmitQuestion(ctx context.Context, roundID int64, questionID int64, playerID int64) error {
+	round, err := s.roundStore.GetRoundByID(ctx, roundID)
+	if err != nil {
+		return err
+	}
+
+	if round.QuestionPlayerID != playerID {
+		return errx.ErrForbidden
+	}
+
+	if round.Status != store.RoundStatusWaitingForQuestion {
+		return errx.ErrInvalidStatus
+	}
+
+	return s.roundStore.SetRoundQuestion(ctx, roundID, questionID)
+}
+
+func (s *RoundService) GetRoundWithQuestion(ctx context.Context, roundID int64) (*store.RoundWithQuestion, error) {
+	round, err := s.roundStore.GetRoundWithQuestion(ctx, roundID)
+	if err != nil {
+		return nil, err
+	}
+	return round, nil
+}

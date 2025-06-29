@@ -2,8 +2,11 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/y3933y3933/joker/internal/db/sqlc"
+	"github.com/y3933y3933/joker/internal/utils/errx"
 )
 
 type Round struct {
@@ -16,6 +19,18 @@ type Round struct {
 	IsJoker          bool     `json:"isJoker"`
 	Status           string   `json:"status"`
 	Deck             []string `json:"-"`
+}
+
+type RoundWithQuestion struct {
+	ID               int64
+	GameID           int64
+	QuestionID       *int64
+	Answer           *string
+	QuestionPlayerID int64
+	AnswerPlayerID   int64
+	Status           string
+	Deck             []string
+	QuestionContent  string
 }
 
 const (
@@ -36,6 +51,9 @@ func NewPostgresRoundStore(queries *sqlc.Queries) *PostgresRoundStore {
 
 type RoundStore interface {
 	Create(ctx context.Context, round *Round) (*Round, error)
+	SetRoundQuestion(ctx context.Context, roundID int64, questionID int64) error
+	GetRoundByID(ctx context.Context, roundID int64) (*Round, error)
+	GetRoundWithQuestion(ctx context.Context, id int64) (*RoundWithQuestion, error)
 }
 
 func (pg *PostgresRoundStore) Create(ctx context.Context, round *Round) (*Round, error) {
@@ -65,5 +83,56 @@ func (pg *PostgresRoundStore) Create(ctx context.Context, round *Round) (*Round,
 		Answer:           fromPgText(res.Answer),
 		IsJoker:          fromPgBool(res.IsJoker),
 		Deck:             res.Deck,
+	}, nil
+}
+
+func (pg *PostgresRoundStore) SetRoundQuestion(ctx context.Context, roundID int64, questionID int64) error {
+	return pg.queries.SetRoundQuestion(ctx, sqlc.SetRoundQuestionParams{
+		QuestionID: toPgInt8(&questionID),
+		ID:         roundID,
+	})
+}
+
+func (s *PostgresRoundStore) GetRoundByID(ctx context.Context, roundID int64) (*Round, error) {
+	res, err := s.queries.GetRoundByID(ctx, roundID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errx.ErrRoundNotFound
+		}
+		return nil, err
+	}
+
+	return &Round{
+		ID:               res.ID,
+		GameID:           res.GameID,
+		QuestionID:       fromPgInt8(res.QuestionID),
+		Answer:           fromPgText(res.Answer),
+		QuestionPlayerID: res.QuestionPlayerID,
+		AnswerPlayerID:   res.AnswerPlayerID,
+		IsJoker:          res.IsJoker.Bool,
+		Status:           res.Status,
+		Deck:             res.Deck,
+	}, nil
+}
+
+func (pg *PostgresRoundStore) GetRoundWithQuestion(ctx context.Context, id int64) (*RoundWithQuestion, error) {
+	res, err := pg.queries.GetRoundWithQuestion(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errx.ErrRoundNotFound
+		}
+		return nil, err
+	}
+
+	return &RoundWithQuestion{
+		ID:               res.ID,
+		GameID:           res.GameID,
+		QuestionID:       fromPgInt8(res.QuestionID),
+		Answer:           fromPgText(res.Answer),
+		QuestionPlayerID: res.QuestionPlayerID,
+		AnswerPlayerID:   res.AnswerPlayerID,
+		Status:           res.Status,
+		Deck:             res.Deck,
+		QuestionContent:  res.QuestionContent,
 	}, nil
 }

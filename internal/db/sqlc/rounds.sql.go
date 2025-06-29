@@ -60,3 +60,91 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (Round
 	)
 	return i, err
 }
+
+const getRoundByID = `-- name: GetRoundByID :one
+SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker, status, deck  
+FROM rounds WHERE id = $1
+`
+
+type GetRoundByIDRow struct {
+	ID               int64
+	GameID           int64
+	QuestionID       pgtype.Int8
+	Answer           pgtype.Text
+	QuestionPlayerID int64
+	AnswerPlayerID   int64
+	IsJoker          pgtype.Bool
+	Status           string
+	Deck             []string
+}
+
+func (q *Queries) GetRoundByID(ctx context.Context, id int64) (GetRoundByIDRow, error) {
+	row := q.db.QueryRow(ctx, getRoundByID, id)
+	var i GetRoundByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.QuestionID,
+		&i.Answer,
+		&i.QuestionPlayerID,
+		&i.AnswerPlayerID,
+		&i.IsJoker,
+		&i.Status,
+		&i.Deck,
+	)
+	return i, err
+}
+
+const getRoundWithQuestion = `-- name: GetRoundWithQuestion :one
+SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck, q.content AS question_content
+FROM rounds r
+JOIN questions q ON q.id = r.question_id
+WHERE r.id = $1
+`
+
+type GetRoundWithQuestionRow struct {
+	ID               int64
+	GameID           int64
+	QuestionID       pgtype.Int8
+	Answer           pgtype.Text
+	QuestionPlayerID int64
+	AnswerPlayerID   int64
+	Status           string
+	Deck             []string
+	QuestionContent  string
+}
+
+func (q *Queries) GetRoundWithQuestion(ctx context.Context, id int64) (GetRoundWithQuestionRow, error) {
+	row := q.db.QueryRow(ctx, getRoundWithQuestion, id)
+	var i GetRoundWithQuestionRow
+	err := row.Scan(
+		&i.ID,
+		&i.GameID,
+		&i.QuestionID,
+		&i.Answer,
+		&i.QuestionPlayerID,
+		&i.AnswerPlayerID,
+		&i.Status,
+		&i.Deck,
+		&i.QuestionContent,
+	)
+	return i, err
+}
+
+const setRoundQuestion = `-- name: SetRoundQuestion :exec
+UPDATE rounds
+SET question_id = $1,
+    status = 'waiting_for_answer',
+    updated_at = NOW()
+WHERE id = $2
+`
+
+type SetRoundQuestionParams struct {
+	QuestionID pgtype.Int8
+	ID         int64
+}
+
+func (q *Queries) SetRoundQuestion(ctx context.Context, arg SetRoundQuestionParams) error {
+	_, err := q.db.Exec(ctx, setRoundQuestion, arg.QuestionID, arg.ID)
+	return err
+}

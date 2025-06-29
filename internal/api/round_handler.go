@@ -9,6 +9,7 @@ import (
 	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/errx"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
+	"github.com/y3933y3933/joker/internal/utils/param"
 	"github.com/y3933y3933/joker/internal/ws"
 )
 
@@ -62,4 +63,72 @@ func (h *RoundHandler) HandleStartGame(c *gin.Context) {
 	}
 
 	httpx.SuccessResponse(c, round)
+}
+
+type SubmitQuestionRequest struct {
+	QuestionID int64 `json:"questionID" binding:"required"`
+}
+
+func (h *RoundHandler) HandleSubmitQuestion(c *gin.Context) {
+	var req SubmitQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	roundID, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, errors.New("invalid round id"))
+		return
+	}
+
+	playerIDAny, ok := c.Get("player_id")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing player id"))
+		return
+	}
+	playerID := playerIDAny.(int64)
+
+	err = h.roundService.SubmitQuestion(c.Request.Context(), roundID, req.QuestionID, playerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, errx.ErrForbidden):
+			httpx.ForbiddenResponse(c, err)
+		case errors.Is(err, errx.ErrInvalidStatus):
+			httpx.BadRequestResponse(c, err)
+		default:
+			httpx.ServerErrorResponse(c, h.logger, err)
+		}
+		return
+	}
+
+	// 拿 round + question 資料（包含回答者 ID 與題目內容）
+	round, err := h.roundService.GetRoundWithQuestion(c.Request.Context(), roundID)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	gameAny, ok := c.Get("game")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
+		return
+	}
+	game := gameAny.(*store.Game)
+
+	// 推播：給所有人通知已進入回答階段
+	room := h.hub.GetRoom(game.Code)
+	if room != nil {
+		// 1️⃣ 推播給所有人：進入回答時間
+		msg1, _ := ws.NewWSMessage(ws.MsgTypeAnswerTime, nil)
+		room.Broadcast(msg1)
+
+		// 2️⃣ 私訊給回答者：這是題目內容
+		msg2, _ := ws.NewWSMessage("round_question", map[string]string{
+			"question": round.QuestionContent,
+		})
+		room.SendTo(round.AnswerPlayerID, msg2)
+	}
+
+	httpx.SuccessResponse(c, gin.H{"message": "question submitted"})
 }

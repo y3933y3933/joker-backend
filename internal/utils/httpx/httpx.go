@@ -27,3 +27,7 @@ func NotFoundResponse(c *gin.Context, err error) {
 func SuccessResponse(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, gin.H{"data": data})
 }
+
+func ForbiddenResponse(c *gin.Context, err error) {
+	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": err.Error()})
+}
