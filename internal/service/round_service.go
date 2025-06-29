@@ -40,16 +40,9 @@ func (s *RoundService) StartGame(ctx context.Context, game *store.Game) (*store.
 		return nil, errx.ErrNotEnoughPlayers
 	}
 
-	// ✅ 按加入順序取前兩位
-	questioner := players[0]
-	answerer := players[1]
-
-	round := &store.Round{
-		GameID:           game.ID,
-		QuestionPlayerID: questioner.ID,
-		AnswerPlayerID:   answerer.ID,
-		Status:           store.RoundStatusWaitingForQuestion,
-		Deck:             generateDeck(DECK_LENGTH), // 自行實作
+	round, err := s.generateRound(ctx, game.ID, players)
+	if err != nil {
+		return nil, err
 	}
 
 	created, err := s.roundStore.Create(ctx, round)
@@ -171,4 +164,69 @@ func (s *RoundService) DrawCard(ctx context.Context, roundID, playerID int64, in
 	}
 
 	return s.roundStore.GetRoundWithQuestion(ctx, roundID)
+}
+
+func (s *RoundService) CreateNextRound(ctx context.Context, game *store.Game) (*store.Round, error) {
+	players, err := s.playerStore.FindPlayersByGameID(ctx, game.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(players) < MIN_GAME_NUM {
+		return nil, errx.ErrNotEnoughPlayers
+	}
+
+	round, err := s.generateRound(ctx, game.ID, players)
+	if err != nil {
+		return nil, err
+	}
+
+	created, err := s.roundStore.Create(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+	return created, nil
+}
+
+func (s *RoundService) generateRound(ctx context.Context, gameID int64, players []*store.Player) (*store.Round, error) {
+	// 找出上一輪
+	lastRound, err := s.roundStore.FindLastRoundByGameID(ctx, gameID)
+	if err != nil && !errors.Is(err, errx.ErrRoundNotFound) {
+		return nil, err
+	}
+
+	var questioner, answerer *store.Player
+
+	if lastRound == nil {
+		// 第一輪：取前兩位
+		questioner, answerer = players[0], players[1]
+	} else {
+		questioner, answerer = getNextPair(players, lastRound.QuestionPlayerID)
+	}
+
+	round := &store.Round{
+		GameID:           gameID,
+		QuestionPlayerID: questioner.ID,
+		AnswerPlayerID:   answerer.ID,
+		Status:           store.RoundStatusWaitingForQuestion,
+		Deck:             generateDeck(DECK_LENGTH),
+	}
+
+	return round, nil
+}
+
+// getNextPair 找到下一輪的 questioner 與 answerer（環狀輪替）
+func getNextPair(players []*store.Player, lastQuestionerID int64) (questioner, answerer *store.Player) {
+	n := len(players)
+	var qIndex int
+
+	// 找出上一輪 questioner 的位置
+	for i, p := range players {
+		if p.ID == lastQuestionerID {
+			qIndex = (i + 1) % n // 下一位成為新的 questioner
+			break
+		}
+	}
+
+	aIndex := (qIndex + 1) % n // 下一位成為回答者
+	return players[qIndex], players[aIndex]
 }

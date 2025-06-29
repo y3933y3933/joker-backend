@@ -42,6 +42,9 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 			// 抽牌
 			rounds.POST("/:id/draw", app.RoundHandler.HandleDrawCard)
 
+			// 下一回合
+			rounds.POST("/next", app.RoundHandler.HandleCreateNextRound)
+
 		}
 
 	}

@@ -16,6 +16,7 @@ const (
 	MsgTypeJokerRevealed   = "joker_revealed"
 	MsgTypePlayerSafe      = "player_safe"
 	MsgTypeGameEnded       = "game_ended"
+	MsgNextRoundStarted    = "next_round_started"
 )
 
 type PlayerJoinedPayload struct {
@@ -24,7 +25,7 @@ type PlayerJoinedPayload struct {
 	IsHost   bool   `json:"isHost"`
 }
 
-type GameStartedPayload struct {
+type RoundStartedPayload struct {
 	RoundID          int64 `json:"roundID"`
 	QuestionPlayerID int64 `json:"questionPlayerID"`
 	AnswererID       int64 `json:"answererID"`

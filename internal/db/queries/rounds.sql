@@ -40,3 +40,10 @@ SET is_joker = $2,
     status = $3,
     updated_at = NOW()
 WHERE id = $1;
+
+-- name: FindLastRoundByGameID :one
+SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker
+FROM rounds
+WHERE game_id = $1
+ORDER BY created_at DESC
+LIMIT 1;

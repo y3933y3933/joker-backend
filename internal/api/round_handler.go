@@ -54,7 +54,7 @@ func (h *RoundHandler) HandleStartGame(c *gin.Context) {
 	// ✅ 推播給所有人
 	room := h.hub.GetRoom(game.Code)
 	if room != nil {
-		msg, _ := ws.NewWSMessage(ws.MsgTypeGameStarted, ws.GameStartedPayload{
+		msg, _ := ws.NewWSMessage(ws.MsgTypeGameStarted, ws.RoundStartedPayload{
 			RoundID:          round.ID,
 			QuestionPlayerID: round.QuestionPlayerID,
 			AnswererID:       round.AnswerPlayerID,
@@ -251,4 +251,32 @@ func (h *RoundHandler) HandleDrawCard(c *gin.Context) {
 		"message": "card drawn",
 		"joker":   round.IsJoker,
 	})
+}
+
+func (h *RoundHandler) HandleCreateNextRound(c *gin.Context) {
+	gameAny, ok := c.Get("game")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
+		return
+	}
+	game := gameAny.(*store.Game)
+
+	round, err := h.roundService.CreateNextRound(c.Request.Context(), game)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	// 推播 round_started 給所有人
+	room := h.hub.GetRoom(game.Code)
+	if room != nil {
+		msg, _ := ws.NewWSMessage(ws.MsgNextRoundStarted, ws.RoundStartedPayload{
+			RoundID:          round.ID,
+			AnswererID:       round.AnswerPlayerID,
+			QuestionPlayerID: round.QuestionPlayerID,
+		})
+		room.Broadcast(msg)
+	}
+
+	httpx.SuccessResponse(c, round)
 }
