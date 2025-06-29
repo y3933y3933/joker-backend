@@ -132,3 +132,63 @@ func (h *RoundHandler) HandleSubmitQuestion(c *gin.Context) {
 
 	httpx.SuccessResponse(c, gin.H{"message": "question submitted"})
 }
+
+type SubmitAnswerRequest struct {
+	Answer string `json:"answer" binding:"required"`
+}
+
+func (h *RoundHandler) HandleSubmitAnswer(c *gin.Context) {
+	var req SubmitAnswerRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	// 取得 roundID
+	roundID, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, errors.New("invalid round id"))
+		return
+	}
+
+	// 從 context 取得 playerID
+	playerIDAny, ok := c.Get("player_id")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing player id"))
+		return
+	}
+	playerID := playerIDAny.(int64)
+
+	// 呼叫 Service
+	err = h.roundService.SubmitAnswer(c.Request.Context(), roundID, req.Answer, playerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, errx.ErrForbidden):
+			httpx.ForbiddenResponse(c, err)
+		case errors.Is(err, errx.ErrInvalidStatus):
+			httpx.BadRequestResponse(c, err)
+		case errors.Is(err, errx.ErrRoundNotFound):
+			httpx.NotFoundResponse(c, err)
+		default:
+			httpx.ServerErrorResponse(c, h.logger, err)
+		}
+		return
+	}
+
+	// 取 game code 推播
+	gameAny, ok := c.Get("game")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game context"))
+		return
+	}
+	game := gameAny.(*store.Game)
+
+	// 推播 answer_submitted 給所有人
+	room := h.hub.GetRoom(game.Code)
+	if room != nil {
+		msg, _ := ws.NewWSMessage(ws.MsgTypeAnswerSubmitted, nil)
+		room.Broadcast(msg)
+	}
+
+	httpx.SuccessResponse(c, gin.H{"message": "answer submitted"})
+}

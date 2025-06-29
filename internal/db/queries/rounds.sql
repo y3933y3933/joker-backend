@@ -26,3 +26,10 @@ SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_
 FROM rounds r
 JOIN questions q ON q.id = r.question_id
 WHERE r.id = $1;
+
+-- name: UpdateAnswer :exec
+UPDATE rounds
+SET answer = $2,
+    status = $3,
+    updated_at = NOW()
+WHERE id = $1;

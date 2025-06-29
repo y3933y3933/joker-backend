@@ -31,6 +31,9 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		// 更新題目
 		codes.POST("/rounds/:id/question", app.RoundHandler.HandleSubmitQuestion)
 
+		// 更新回答
+		codes.POST("/rounds/:id/answer", app.RoundHandler.HandleSubmitAnswer)
+
 	}
 	// ws
 	router.GET("/ws/games/:code", app.WSHandler.ServeWS)

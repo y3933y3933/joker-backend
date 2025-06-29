@@ -54,6 +54,7 @@ type RoundStore interface {
 	SetRoundQuestion(ctx context.Context, roundID int64, questionID int64) error
 	GetRoundByID(ctx context.Context, roundID int64) (*Round, error)
 	GetRoundWithQuestion(ctx context.Context, id int64) (*RoundWithQuestion, error)
+	UpdateAnswer(ctx context.Context, roundID int64, answer string, status string) error
 }
 
 func (pg *PostgresRoundStore) Create(ctx context.Context, round *Round) (*Round, error) {
@@ -135,4 +136,14 @@ func (pg *PostgresRoundStore) GetRoundWithQuestion(ctx context.Context, id int64
 		Deck:             res.Deck,
 		QuestionContent:  res.QuestionContent,
 	}, nil
+}
+
+func (pg *PostgresRoundStore) UpdateAnswer(ctx context.Context, roundID int64, answer string, status string) error {
+	args := sqlc.UpdateAnswerParams{
+		ID:     roundID,
+		Answer: toPgText(&answer),
+		Status: status,
+	}
+	err := pg.queries.UpdateAnswer(ctx, args)
+	return err
 }

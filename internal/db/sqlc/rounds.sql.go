@@ -148,3 +148,22 @@ func (q *Queries) SetRoundQuestion(ctx context.Context, arg SetRoundQuestionPara
 	_, err := q.db.Exec(ctx, setRoundQuestion, arg.QuestionID, arg.ID)
 	return err
 }
+
+const updateAnswer = `-- name: UpdateAnswer :exec
+UPDATE rounds
+SET answer = $2,
+    status = $3,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateAnswerParams struct {
+	ID     int64
+	Answer pgtype.Text
+	Status string
+}
+
+func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) error {
+	_, err := q.db.Exec(ctx, updateAnswer, arg.ID, arg.Answer, arg.Status)
+	return err
+}

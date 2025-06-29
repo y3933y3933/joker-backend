@@ -115,3 +115,25 @@ func (s *RoundService) GetRoundWithQuestion(ctx context.Context, roundID int64) 
 	}
 	return round, nil
 }
+
+func (s *RoundService) SubmitAnswer(ctx context.Context, roundID int64, answer string, playerID int64) error {
+	round, err := s.roundStore.GetRoundByID(ctx, roundID)
+	if err != nil {
+		return err
+	}
+
+	// 驗證身份與狀態
+	if round.AnswerPlayerID != playerID {
+		return errx.ErrForbidden
+	}
+	if round.Status != store.RoundStatusWaitingForAnswer {
+		return errx.ErrInvalidStatus
+	}
+
+	// 更新回答與狀態
+	err = s.roundStore.UpdateAnswer(ctx, roundID, answer, store.RoundStatusWaitingForDraw)
+	if err != nil {
+		return err
+	}
+	return nil
+}
