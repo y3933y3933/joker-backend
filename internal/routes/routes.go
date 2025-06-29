@@ -13,13 +13,21 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 
 	// games
 	games := router.Group("/api/games")
+	// 建立遊戲
 	games.POST("/", app.GameHandler.HandleCreateGame)
 
 	codes := games.Group("/:code", middleware.ValidateGameExists(app.GameStore))
 	{
+		// 加入遊戲
 		codes.POST("/join", app.PlayerHandler.HandleJoinGame)
+		// 查看所有玩家
 		codes.GET("/players", app.PlayerHandler.HandleListPlayers)
+		// 開始遊戲
 		codes.POST("/start", app.RoundHandler.HandleStartGame)
+
+		// 取得隨機題目
+		codes.GET("/questions", app.GameHandler.HandleGetQuestions)
+
 	}
 	// ws
 	router.GET("/ws/games/:code", app.WSHandler.ServeWS)

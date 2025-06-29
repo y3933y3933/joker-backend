@@ -59,14 +59,16 @@ func NewApplication() (*Application, error) {
 	gameStore := store.NewPostgresGameStore(queries)
 	playerStore := store.NewPostgresPlayerStore(queries)
 	roundStore := store.NewPostgresRoundStore(queries)
+	questionStore := store.NewPostgresQuestionStore(queries)
 
 	// service
 	gameService := service.NewGameService(gameStore)
 	playerService := service.NewPlayerService(playerStore, gameStore)
 	roundService := service.NewRoundService(roundStore, playerStore, gameStore)
+	questionService := service.NewQuestionService(questionStore)
 
 	// handler
-	gameHandler := api.NewGameHandler(gameService, logger)
+	gameHandler := api.NewGameHandler(gameService, questionService, logger)
 	playerHandler := api.NewPlayerHandler(playerService, hub, logger)
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
 
