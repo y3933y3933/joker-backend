@@ -62,16 +62,26 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (Round
 }
 
 const findLastRoundByGameID = `-- name: FindLastRoundByGameID :one
-SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker, status, created_at, deck
+SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker
 FROM rounds
 WHERE game_id = $1
 ORDER BY created_at DESC
 LIMIT 1
 `
 
-func (q *Queries) FindLastRoundByGameID(ctx context.Context, gameID int64) (Round, error) {
+type FindLastRoundByGameIDRow struct {
+	ID               int64
+	GameID           int64
+	QuestionID       pgtype.Int8
+	Answer           pgtype.Text
+	QuestionPlayerID int64
+	AnswerPlayerID   int64
+	IsJoker          pgtype.Bool
+}
+
+func (q *Queries) FindLastRoundByGameID(ctx context.Context, gameID int64) (FindLastRoundByGameIDRow, error) {
 	row := q.db.QueryRow(ctx, findLastRoundByGameID, gameID)
-	var i Round
+	var i FindLastRoundByGameIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
@@ -80,9 +90,6 @@ func (q *Queries) FindLastRoundByGameID(ctx context.Context, gameID int64) (Roun
 		&i.QuestionPlayerID,
 		&i.AnswerPlayerID,
 		&i.IsJoker,
-		&i.Status,
-		&i.CreatedAt,
-		&i.Deck,
 	)
 	return i, err
 }

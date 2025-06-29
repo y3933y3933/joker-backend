@@ -2,8 +2,11 @@ package store
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/y3933y3933/joker/internal/db/sqlc"
+	"github.com/y3933y3933/joker/internal/utils/errx"
 )
 
 type Player struct {
@@ -25,6 +28,9 @@ type PlayerStore interface {
 	Create(ctx context.Context, player *Player) (*Player, error)
 	CountPlayerInGame(ctx context.Context, gameID int64) (int64, error)
 	FindPlayersByGameID(ctx context.Context, gameID int64) ([]*Player, error)
+	DeleteByID(ctx context.Context, id int64) error
+	FindByID(ctx context.Context, id int64) (*Player, error)
+	UpdateHost(ctx context.Context, id int64, isHost bool) error
 }
 
 func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Player, error) {
@@ -69,4 +75,32 @@ func (pg *PostgresPlayerStore) FindPlayersByGameID(ctx context.Context, gameID i
 		})
 	}
 	return players, nil
+}
+
+func (pg *PostgresPlayerStore) DeleteByID(ctx context.Context, id int64) error {
+	return pg.queries.DeletePlayerByID(ctx, id)
+}
+
+func (pg *PostgresPlayerStore) FindByID(ctx context.Context, id int64) (*Player, error) {
+	res, err := pg.queries.FindPlayerByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errx.ErrPlayerNotFound
+		}
+		return nil, err
+	}
+
+	return &Player{
+		ID:       res.ID,
+		Nickname: res.Nickname,
+		IsHost:   fromPgBool(res.IsHost),
+		GameID:   res.GameID,
+	}, nil
+}
+
+func (pg *PostgresPlayerStore) UpdateHost(ctx context.Context, id int64, isHost bool) error {
+	return pg.queries.UpdateHost(ctx, sqlc.UpdateHostParams{
+		ID:     id,
+		IsHost: toPgBool(&isHost),
+	})
 }

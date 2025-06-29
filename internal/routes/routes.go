@@ -31,6 +31,9 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		// 結束遊戲
 		codes.POST("/end", app.GameHandler.HandleEndGame)
 
+		// 離開遊戲（含 Host 轉移）
+		codes.POST("/players/leave", middleware.WithPlayerID(), app.PlayerHandler.HandleLeaveGame)
+
 		rounds := codes.Group("/rounds", middleware.WithPlayerID())
 		{
 			// 更新題目

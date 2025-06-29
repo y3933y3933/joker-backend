@@ -17,6 +17,8 @@ const (
 	MsgTypePlayerSafe      = "player_safe"
 	MsgTypeGameEnded       = "game_ended"
 	MsgNextRoundStarted    = "next_round_started"
+	MsgPlayerLeft          = "player_left"
+	MsgHostTransferred     = "host_transferred"
 )
 
 type PlayerJoinedPayload struct {
@@ -33,6 +35,16 @@ type RoundStartedPayload struct {
 
 type JokerRevealedPayload struct {
 	Question string `json:"question"`
+}
+
+type PlayerLeftPayload struct {
+	ID       int64  `json:"ID"`
+	Nickname string `json:"nickname"`
+}
+
+type HostTransferredPayload struct {
+	ID       int64  `json:"ID"`
+	Nickname string `json:"nickname"`
 }
 
 // NewWSMessage creates a new WSMessage from any data struct or map.

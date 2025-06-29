@@ -43,3 +43,32 @@ func (s *PlayerService) JoinGame(ctx context.Context, gameID int64, nickname str
 func (s *PlayerService) ListPlayersInGame(ctx context.Context, gameID int64) ([]*store.Player, error) {
 	return s.playerStore.FindPlayersByGameID(ctx, gameID)
 }
+
+func (s *PlayerService) LeaveGame(ctx context.Context, playerID int64) (left *store.Player, newHost *store.Player, err error) {
+	player, err := s.playerStore.FindByID(ctx, playerID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = s.playerStore.DeleteByID(ctx, playerID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if player.IsHost {
+		players, err := s.playerStore.FindPlayersByGameID(ctx, player.GameID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(players) > 0 {
+			newHost := players[0]
+			err = s.playerStore.UpdateHost(ctx, newHost.ID, true)
+			if err != nil {
+				return nil, nil, err
+			}
+			return player, newHost, nil
+		}
+	}
+
+	return player, nil, nil
+}
