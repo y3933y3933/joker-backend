@@ -4,6 +4,8 @@ import "errors"
 
 // 遊戲相關錯誤
 var (
-	ErrGenerateCode = errors.New("failed to generate unique game code")
-	ErrGameNotFound = errors.New("game not found")
+	ErrGenerateCode      = errors.New("failed to generate unique game code")
+	ErrGameNotFound      = errors.New("game not found")
+	ErrInvalidGameStatus = errors.New("invalid game status")
+	ErrNotEnoughPlayers  = errors.New("not enough players")
 )

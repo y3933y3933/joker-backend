@@ -33,6 +33,7 @@ type GameStore interface {
 	Create(context.Context, *Game) (*Game, error)
 	GameCodeExists(ctx context.Context, code string) (bool, error)
 	GetGameByCode(ctx context.Context, code string) (*Game, error)
+	UpdateStatus(ctx context.Context, gameID int64, status string) error
 }
 
 func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
@@ -75,4 +76,11 @@ func (pg *PostgresGameStore) GetGameByCode(ctx context.Context, code string) (*G
 		Code:   game.Code,
 		Status: game.Status,
 	}, nil
+}
+
+func (pg *PostgresGameStore) UpdateStatus(ctx context.Context, gameID int64, status string) error {
+	return pg.queries.UpdateGameStatus(ctx, sqlc.UpdateGameStatusParams{
+		ID:     gameID,
+		Status: string(status),
+	})
 }

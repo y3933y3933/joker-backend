@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/y3933y3933/joker/internal/db/sqlc"
 )
 
@@ -32,10 +31,7 @@ func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Pla
 	args := sqlc.CreatePlayerParams{
 		GameID:   player.GameID,
 		Nickname: player.Nickname,
-		IsHost: pgtype.Bool{
-			Bool:  player.IsHost,
-			Valid: true,
-		},
+		IsHost:   toPgBool(&player.IsHost),
 	}
 
 	row, err := pg.queries.CreatePlayer(ctx, args)

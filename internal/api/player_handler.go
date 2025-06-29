@@ -13,12 +13,12 @@ import (
 )
 
 type PlayerHandler struct {
-	playerService service.PlayerService
+	playerService *service.PlayerService
 	hub           *ws.Hub
 	logger        *slog.Logger
 }
 
-func NewPlayerHandler(playerService service.PlayerService, hub *ws.Hub, logger *slog.Logger) *PlayerHandler {
+func NewPlayerHandler(playerService *service.PlayerService, hub *ws.Hub, logger *slog.Logger) *PlayerHandler {
 	return &PlayerHandler{
 		playerService: playerService,
 		hub:           hub,
@@ -58,7 +58,7 @@ func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 	// ✅ 推播 player_joined 給房間內所有人
 	room := h.hub.GetRoom(game.Code)
 	if room != nil {
-		msg, err := ws.NewWSMessage("player_joined", ws.PlayerJoinedPayload{
+		msg, err := ws.NewWSMessage(ws.MsgTypePlayerJoined, ws.PlayerJoinedPayload{
 			ID:       player.ID,
 			Nickname: player.Nickname,
 			IsHost:   player.IsHost,

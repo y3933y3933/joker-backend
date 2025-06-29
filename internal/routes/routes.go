@@ -19,8 +19,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	{
 		codes.POST("/join", app.PlayerHandler.HandleJoinGame)
 		codes.GET("/players", app.PlayerHandler.HandleListPlayers)
+		codes.POST("/start", app.RoundHandler.HandleStartGame)
 	}
-
 	// ws
 	router.GET("/ws/games/:code", app.WSHandler.ServeWS)
 

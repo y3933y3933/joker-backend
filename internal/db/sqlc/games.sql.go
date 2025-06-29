@@ -59,3 +59,20 @@ func (q *Queries) GetGameByCode(ctx context.Context, code string) (Game, error) 
 	)
 	return i, err
 }
+
+const updateGameStatus = `-- name: UpdateGameStatus :exec
+UPDATE games
+SET status = $2,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateGameStatusParams struct {
+	ID     int64
+	Status string
+}
+
+func (q *Queries) UpdateGameStatus(ctx context.Context, arg UpdateGameStatusParams) error {
+	_, err := q.db.Exec(ctx, updateGameStatus, arg.ID, arg.Status)
+	return err
+}
