@@ -28,11 +28,18 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		// 取得隨機題目
 		codes.GET("/questions", app.GameHandler.HandleGetQuestions)
 
-		// 更新題目
-		codes.POST("/rounds/:id/question", app.RoundHandler.HandleSubmitQuestion)
+		rounds := codes.Group("/rounds", middleware.WithPlayerID())
+		{
+			// 更新題目
+			rounds.POST("/:id/question", app.RoundHandler.HandleSubmitQuestion)
 
-		// 更新回答
-		codes.POST("/rounds/:id/answer", app.RoundHandler.HandleSubmitAnswer)
+			// 更新回答
+			rounds.POST("/:id/answer", app.RoundHandler.HandleSubmitAnswer)
+
+			// 抽牌
+			rounds.POST("/:id/draw", app.RoundHandler.HandleDrawCard)
+
+		}
 
 	}
 	// ws

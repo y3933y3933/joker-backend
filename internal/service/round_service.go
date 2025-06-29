@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"math/rand"
 
@@ -136,4 +137,38 @@ func (s *RoundService) SubmitAnswer(ctx context.Context, roundID int64, answer s
 		return err
 	}
 	return nil
+}
+
+func (s *RoundService) DrawCard(ctx context.Context, roundID, playerID int64, index int) (*store.RoundWithQuestion, error) {
+	round, err := s.roundStore.GetRoundByID(ctx, roundID)
+	if err != nil {
+		return nil, err
+	}
+
+	if round.Status != store.RoundStatusWaitingForDraw {
+		return nil, errx.ErrInvalidStatus
+	}
+	if round.AnswerPlayerID != playerID {
+		return nil, errx.ErrForbidden
+	}
+	if index < 0 || index >= len(round.Deck) {
+		return nil, errors.New("invalid card index")
+	}
+
+	card := round.Deck[index]
+	isJoker := card == "joker"
+
+	var newStatus string
+	if isJoker {
+		newStatus = store.RoundStatusRevealed
+	} else {
+		newStatus = store.RoundStatusDone
+	}
+
+	err = s.roundStore.UpdateDrawResult(ctx, roundID, isJoker, newStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.roundStore.GetRoundWithQuestion(ctx, roundID)
 }

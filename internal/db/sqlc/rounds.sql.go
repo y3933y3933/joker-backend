@@ -96,7 +96,7 @@ func (q *Queries) GetRoundByID(ctx context.Context, id int64) (GetRoundByIDRow, 
 }
 
 const getRoundWithQuestion = `-- name: GetRoundWithQuestion :one
-SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck, q.content AS question_content
+SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck,r.is_joker, q.content AS question_content
 FROM rounds r
 JOIN questions q ON q.id = r.question_id
 WHERE r.id = $1
@@ -111,6 +111,7 @@ type GetRoundWithQuestionRow struct {
 	AnswerPlayerID   int64
 	Status           string
 	Deck             []string
+	IsJoker          pgtype.Bool
 	QuestionContent  string
 }
 
@@ -126,6 +127,7 @@ func (q *Queries) GetRoundWithQuestion(ctx context.Context, id int64) (GetRoundW
 		&i.AnswerPlayerID,
 		&i.Status,
 		&i.Deck,
+		&i.IsJoker,
 		&i.QuestionContent,
 	)
 	return i, err
@@ -165,5 +167,24 @@ type UpdateAnswerParams struct {
 
 func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) error {
 	_, err := q.db.Exec(ctx, updateAnswer, arg.ID, arg.Answer, arg.Status)
+	return err
+}
+
+const updateDrawResult = `-- name: UpdateDrawResult :exec
+UPDATE rounds
+SET is_joker = $2,
+    status = $3,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateDrawResultParams struct {
+	ID      int64
+	IsJoker pgtype.Bool
+	Status  string
+}
+
+func (q *Queries) UpdateDrawResult(ctx context.Context, arg UpdateDrawResultParams) error {
+	_, err := q.db.Exec(ctx, updateDrawResult, arg.ID, arg.IsJoker, arg.Status)
 	return err
 }

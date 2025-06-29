@@ -30,6 +30,10 @@ type GameStartedPayload struct {
 	AnswererID       int64 `json:"answererID"`
 }
 
+type JokerRevealedPayload struct {
+	Question string `json:"question"`
+}
+
 // NewWSMessage creates a new WSMessage from any data struct or map.
 func NewWSMessage(msgType string, data any) (WSMessage, error) {
 	b, err := json.Marshal(data)

@@ -192,3 +192,63 @@ func (h *RoundHandler) HandleSubmitAnswer(c *gin.Context) {
 
 	httpx.SuccessResponse(c, gin.H{"message": "answer submitted"})
 }
+
+type DrawCardRequest struct {
+	Index int `json:"index" binding:"required"`
+}
+
+func (h *RoundHandler) HandleDrawCard(c *gin.Context) {
+	var req DrawCardRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	roundID, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, errors.New("invalid round id"))
+		return
+	}
+
+	playerIDAny, ok := c.Get("player_id")
+	if !ok {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing player id"))
+		return
+	}
+	playerID := playerIDAny.(int64)
+
+	round, err := h.roundService.DrawCard(c.Request.Context(), roundID, playerID, req.Index)
+	if err != nil {
+		switch {
+		case errors.Is(err, errx.ErrForbidden):
+			httpx.ForbiddenResponse(c, err)
+		case errors.Is(err, errx.ErrInvalidStatus):
+			httpx.BadRequestResponse(c, err)
+		default:
+			httpx.ServerErrorResponse(c, h.logger, err)
+		}
+		return
+	}
+
+	// 推播
+	gameAny, _ := c.Get("game")
+	game := gameAny.(*store.Game)
+
+	room := h.hub.GetRoom(game.Code)
+	if room != nil {
+		if round.IsJoker {
+			msg, _ := ws.NewWSMessage(ws.MsgTypeJokerRevealed, ws.JokerRevealedPayload{
+				Question: round.QuestionContent,
+			})
+			room.Broadcast(msg)
+		} else {
+			msg, _ := ws.NewWSMessage(ws.MsgTypePlayerSafe, nil)
+			room.Broadcast(msg)
+		}
+	}
+
+	httpx.SuccessResponse(c, gin.H{
+		"message": "card drawn",
+		"joker":   round.IsJoker,
+	})
+}

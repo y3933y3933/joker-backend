@@ -22,15 +22,8 @@ type Round struct {
 }
 
 type RoundWithQuestion struct {
-	ID               int64
-	GameID           int64
-	QuestionID       *int64
-	Answer           *string
-	QuestionPlayerID int64
-	AnswerPlayerID   int64
-	Status           string
-	Deck             []string
-	QuestionContent  string
+	Round
+	QuestionContent string `json:"question"` // 顯示題目內容
 }
 
 const (
@@ -55,6 +48,7 @@ type RoundStore interface {
 	GetRoundByID(ctx context.Context, roundID int64) (*Round, error)
 	GetRoundWithQuestion(ctx context.Context, id int64) (*RoundWithQuestion, error)
 	UpdateAnswer(ctx context.Context, roundID int64, answer string, status string) error
+	UpdateDrawResult(ctx context.Context, roundID int64, isJoker bool, status string) error
 }
 
 func (pg *PostgresRoundStore) Create(ctx context.Context, round *Round) (*Round, error) {
@@ -126,15 +120,18 @@ func (pg *PostgresRoundStore) GetRoundWithQuestion(ctx context.Context, id int64
 	}
 
 	return &RoundWithQuestion{
-		ID:               res.ID,
-		GameID:           res.GameID,
-		QuestionID:       fromPgInt8(res.QuestionID),
-		Answer:           fromPgText(res.Answer),
-		QuestionPlayerID: res.QuestionPlayerID,
-		AnswerPlayerID:   res.AnswerPlayerID,
-		Status:           res.Status,
-		Deck:             res.Deck,
-		QuestionContent:  res.QuestionContent,
+		Round: Round{
+			ID:               res.ID,
+			GameID:           res.GameID,
+			QuestionID:       fromPgInt8(res.QuestionID),
+			Answer:           fromPgText(res.Answer),
+			QuestionPlayerID: res.QuestionPlayerID,
+			AnswerPlayerID:   res.AnswerPlayerID,
+			IsJoker:          fromPgBool(res.IsJoker), // 如果有這個欄位
+			Status:           res.Status,
+			Deck:             res.Deck,
+		},
+		QuestionContent: res.QuestionContent,
 	}, nil
 }
 
@@ -146,4 +143,13 @@ func (pg *PostgresRoundStore) UpdateAnswer(ctx context.Context, roundID int64, a
 	}
 	err := pg.queries.UpdateAnswer(ctx, args)
 	return err
+}
+
+func (pg *PostgresRoundStore) UpdateDrawResult(ctx context.Context, roundID int64, isJoker bool, status string) error {
+	args := sqlc.UpdateDrawResultParams{
+		ID:      roundID,
+		IsJoker: toPgBool(&isJoker),
+		Status:  status,
+	}
+	return pg.queries.UpdateDrawResult(ctx, args)
 }

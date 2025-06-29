@@ -22,7 +22,7 @@ SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, i
 FROM rounds WHERE id = $1;
 
 -- name: GetRoundWithQuestion :one
-SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck, q.content AS question_content
+SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck,r.is_joker, q.content AS question_content
 FROM rounds r
 JOIN questions q ON q.id = r.question_id
 WHERE r.id = $1;
@@ -30,6 +30,13 @@ WHERE r.id = $1;
 -- name: UpdateAnswer :exec
 UPDATE rounds
 SET answer = $2,
+    status = $3,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: UpdateDrawResult :exec
+UPDATE rounds
+SET is_joker = $2,
     status = $3,
     updated_at = NOW()
 WHERE id = $1;
