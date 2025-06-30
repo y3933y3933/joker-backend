@@ -21,7 +21,7 @@ SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, i
 FROM rounds WHERE id = $1;
 
 -- name: GetRoundWithQuestion :one
-SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck,r.is_joker, q.content AS question_content
+SELECT r.id, r.game_id, r.question_id, r.answer, r.question_player_id, r.answer_player_id, r.status, r.deck,r.is_joker,q.level, q.content AS question_content
 FROM rounds r
 JOIN questions q ON q.id = r.question_id
 WHERE r.id = $1;

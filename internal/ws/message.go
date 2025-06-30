@@ -34,7 +34,8 @@ type RoundStartedPayload struct {
 }
 
 type JokerRevealedPayload struct {
-	Question string `json:"question"`
+	Level   string `json:"level"`
+	Content string `json:"content"`
 }
 
 type PlayerLeftPayload struct {
@@ -45,6 +46,10 @@ type PlayerLeftPayload struct {
 type HostTransferredPayload struct {
 	ID       int64  `json:"id"`
 	Nickname string `json:"nickname"`
+}
+
+type AnswerSubmittedPayload struct {
+	Answer string `json:"answer"`
 }
 
 // NewWSMessage creates a new WSMessage from any data struct or map.

@@ -124,9 +124,12 @@ func (h *RoundHandler) HandleSubmitQuestion(c *gin.Context) {
 		room.Broadcast(msg1)
 
 		// 2️⃣ 私訊給回答者：這是題目內容
-		msg2, _ := ws.NewWSMessage("round_question", map[string]string{
-			"question": round.QuestionContent,
+
+		msg2, _ := ws.NewWSMessage(ws.MsgTypeRoundQuestion, map[string]string{
+			"level":   round.Level,
+			"content": round.Content,
 		})
+
 		room.SendTo(round.AnswerPlayerID, msg2)
 	}
 
@@ -186,7 +189,9 @@ func (h *RoundHandler) HandleSubmitAnswer(c *gin.Context) {
 	// 推播 answer_submitted 給所有人
 	room := h.hub.GetRoom(game.Code)
 	if room != nil {
-		msg, _ := ws.NewWSMessage(ws.MsgTypeAnswerSubmitted, nil)
+		msg, _ := ws.NewWSMessage(ws.MsgTypeAnswerSubmitted, ws.AnswerSubmittedPayload{
+			Answer: req.Answer,
+		})
 		room.Broadcast(msg)
 	}
 
@@ -194,7 +199,7 @@ func (h *RoundHandler) HandleSubmitAnswer(c *gin.Context) {
 }
 
 type DrawCardRequest struct {
-	Index int `json:"index" binding:"required"`
+	Index *int `json:"index" binding:"required"`
 }
 
 func (h *RoundHandler) HandleDrawCard(c *gin.Context) {
@@ -217,7 +222,7 @@ func (h *RoundHandler) HandleDrawCard(c *gin.Context) {
 	}
 	playerID := playerIDAny.(int64)
 
-	round, err := h.roundService.DrawCard(c.Request.Context(), roundID, playerID, req.Index)
+	round, err := h.roundService.DrawCard(c.Request.Context(), roundID, playerID, *req.Index)
 	if err != nil {
 		switch {
 		case errors.Is(err, errx.ErrForbidden):
@@ -238,7 +243,8 @@ func (h *RoundHandler) HandleDrawCard(c *gin.Context) {
 	if room != nil {
 		if round.IsJoker {
 			msg, _ := ws.NewWSMessage(ws.MsgTypeJokerRevealed, ws.JokerRevealedPayload{
-				Question: round.QuestionContent,
+				Level:   round.Level,
+				Content: round.Content,
 			})
 			room.Broadcast(msg)
 		} else {
@@ -248,8 +254,7 @@ func (h *RoundHandler) HandleDrawCard(c *gin.Context) {
 	}
 
 	httpx.SuccessResponse(c, gin.H{
-		"message": "card drawn",
-		"joker":   round.IsJoker,
+		"joker": round.IsJoker,
 	})
 }
 

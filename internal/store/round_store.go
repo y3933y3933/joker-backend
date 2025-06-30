@@ -23,7 +23,7 @@ type Round struct {
 
 type RoundWithQuestion struct {
 	Round
-	QuestionContent string `json:"question"` // 顯示題目內容
+	Question
 }
 
 const (
@@ -132,7 +132,10 @@ func (pg *PostgresRoundStore) GetRoundWithQuestion(ctx context.Context, id int64
 			Status:           res.Status,
 			Deck:             res.Deck,
 		},
-		QuestionContent: res.QuestionContent,
+		Question: Question{
+			Level:   res.Level,
+			Content: res.QuestionContent,
+		},
 	}, nil
 }
 

@@ -2,6 +2,7 @@ package ws
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -44,11 +45,13 @@ func (h *Handler) ServeWS(c *gin.Context) {
 		h.Logger.Error("ws upgrade error: ", err)
 		return
 	}
+	fmt.Printf("ServeWS: playerID=%d (query=%s)\n", playerID, playerIDStr)
 
 	room := h.Hub.GetRoom(gameCode)
 	if room == nil {
 		room = h.Hub.CreateRoom(gameCode)
 	}
+	fmt.Printf("ServeWS: room=%p\n", room)
 
 	client := &Client{
 		ID:   playerID,

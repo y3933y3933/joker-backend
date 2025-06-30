@@ -2,7 +2,6 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
@@ -123,7 +122,6 @@ func (h *PlayerHandler) HandleLeaveGame(c *gin.Context) {
 			ID:       left.ID,
 			Nickname: left.Nickname,
 		})
-		fmt.Println("msg1", msg1)
 		room.Broadcast(msg1)
 
 		if newHost != nil {
