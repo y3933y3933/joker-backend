@@ -33,13 +33,17 @@ func ValidateGameExists(gameStore store.GameStore) gin.HandlerFunc {
 
 func WithPlayerID() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		idStr := c.Query("player_id") // 可改成從 token 或 header 取出
-		id, err := strconv.ParseInt(idStr, 10, 64)
+		playerIDStr := c.GetHeader("X-Player-ID")
+		if playerIDStr == "" {
+			httpx.BadRequestResponse(c, errors.New("missing X-Player-ID header"))
+			return
+		}
+		playerID, err := strconv.ParseInt(playerIDStr, 10, 64)
 		if err != nil {
 			httpx.BadRequestResponse(c, errors.New("invalid player id"))
 			return
 		}
-		c.Set("player_id", id)
+		c.Set("player_id", playerID)
 		c.Next()
 	}
 }

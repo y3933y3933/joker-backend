@@ -38,12 +38,12 @@ type JokerRevealedPayload struct {
 }
 
 type PlayerLeftPayload struct {
-	ID       int64  `json:"ID"`
+	ID       int64  `json:"id"`
 	Nickname string `json:"nickname"`
 }
 
 type HostTransferredPayload struct {
-	ID       int64  `json:"ID"`
+	ID       int64  `json:"id"`
 	Nickname string `json:"nickname"`
 }
 
