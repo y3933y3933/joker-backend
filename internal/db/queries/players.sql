@@ -28,3 +28,8 @@ WHERE id = $1;
 UPDATE players
 SET is_host = $2
 WHERE id = $1;
+
+-- name: FindPlayerByNickname :one
+SELECT id, nickname, is_host, game_id
+FROM players
+WHERE game_id = $1 AND nickname = $2;

@@ -31,6 +31,7 @@ type PlayerStore interface {
 	DeleteByID(ctx context.Context, id int64) error
 	FindByID(ctx context.Context, id int64) (*Player, error)
 	UpdateHost(ctx context.Context, id int64, isHost bool) error
+	FindByNickname(ctx context.Context, gameID int64, nickname string) (*Player, error)
 }
 
 func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Player, error) {
@@ -103,4 +104,23 @@ func (pg *PostgresPlayerStore) UpdateHost(ctx context.Context, id int64, isHost 
 		ID:     id,
 		IsHost: toPgBool(&isHost),
 	})
+}
+
+func (pg *PostgresPlayerStore) FindByNickname(ctx context.Context, gameID int64, nickname string) (*Player, error) {
+	player, err := pg.queries.FindPlayerByNickname(ctx, sqlc.FindPlayerByNicknameParams{
+		GameID:   gameID,
+		Nickname: nickname,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &Player{
+		ID:       player.ID,
+		Nickname: player.Nickname,
+		IsHost:   fromPgBool(player.IsHost),
+		GameID:   player.GameID,
+	}, nil
 }

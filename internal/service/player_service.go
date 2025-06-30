@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/y3933y3933/joker/internal/store"
+	"github.com/y3933y3933/joker/internal/utils/errx"
 )
 
 type PlayerService struct {
@@ -19,6 +20,15 @@ func NewPlayerService(playerStore store.PlayerStore, gameStore store.GameStore) 
 }
 
 func (s *PlayerService) JoinGame(ctx context.Context, gameID int64, nickname string) (*store.Player, error) {
+	// 🔍 檢查暱稱是否已存在
+	existing, err := s.playerStore.FindByNickname(ctx, gameID, nickname)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, errx.ErrDuplicateNickname
+	}
+
 	count, err := s.playerStore.CountPlayerInGame(ctx, gameID)
 	if err != nil {
 		return nil, err

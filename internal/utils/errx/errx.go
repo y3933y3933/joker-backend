@@ -11,4 +11,5 @@ var (
 	ErrInvalidStatus     = errors.New("invalid round status")
 	ErrForbidden         = errors.New("you are not allowed to perform this action")
 	ErrPlayerNotFound    = errors.New("player not found")
+	ErrDuplicateNickname = errors.New("nickname already taken")
 )

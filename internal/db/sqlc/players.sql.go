@@ -83,6 +83,36 @@ func (q *Queries) FindPlayerByID(ctx context.Context, id int64) (FindPlayerByIDR
 	return i, err
 }
 
+const findPlayerByNickname = `-- name: FindPlayerByNickname :one
+SELECT id, nickname, is_host, game_id
+FROM players
+WHERE game_id = $1 AND nickname = $2
+`
+
+type FindPlayerByNicknameParams struct {
+	GameID   int64
+	Nickname string
+}
+
+type FindPlayerByNicknameRow struct {
+	ID       int64
+	Nickname string
+	IsHost   pgtype.Bool
+	GameID   int64
+}
+
+func (q *Queries) FindPlayerByNickname(ctx context.Context, arg FindPlayerByNicknameParams) (FindPlayerByNicknameRow, error) {
+	row := q.db.QueryRow(ctx, findPlayerByNickname, arg.GameID, arg.Nickname)
+	var i FindPlayerByNicknameRow
+	err := row.Scan(
+		&i.ID,
+		&i.Nickname,
+		&i.IsHost,
+		&i.GameID,
+	)
+	return i, err
+}
+
 const findPlayersByGameID = `-- name: FindPlayersByGameID :many
 SELECT id, nickname, is_host, game_id
 FROM players

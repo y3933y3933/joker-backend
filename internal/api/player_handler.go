@@ -48,11 +48,15 @@ func (h *PlayerHandler) HandleJoinGame(c *gin.Context) {
 
 	player, err := h.playerService.JoinGame(c.Request.Context(), game.ID, req.Nickname)
 	if err != nil {
-		if errors.Is(err, errx.ErrGameNotFound) {
+		switch {
+		case errors.Is(err, errx.ErrGameNotFound):
 			httpx.BadRequestResponse(c, errors.New("game not found"))
-			return
+		case errors.Is(err, errx.ErrDuplicateNickname):
+			httpx.BadRequestResponse(c, errors.New("this nickname is already in use"))
+		default:
+			httpx.ServerErrorResponse(c, h.logger, err)
 		}
-		httpx.ServerErrorResponse(c, h.logger, err)
+
 		return
 	}
 
