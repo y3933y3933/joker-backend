@@ -21,6 +21,18 @@ const (
 	GameStatusEnded   = "ended"
 )
 
+type GamePlayerSummary struct {
+	ID              int64  `json:"id"`
+	Nickname        string `json:"nickname"`
+	JokerCardsDrawn int32  `json:"jokerCardsDrawn"`
+}
+
+type GameSummary struct {
+	TotalRounds int64               `json:"totalRounds"`
+	JokerCards  int64               `json:"jokerCards"`
+	Players     []GamePlayerSummary `json:"players"`
+}
+
 type PostgresGameStore struct {
 	queries *sqlc.Queries
 }
@@ -35,6 +47,8 @@ type GameStore interface {
 	GetGameByCode(ctx context.Context, code string) (*Game, error)
 	UpdateStatus(ctx context.Context, gameID int64, status string) error
 	EndGame(ctx context.Context, code string) error
+	GetGameSummary(ctx context.Context, gameID int64) (*GameSummary, error)
+	GetGamePlayerStats(ctx context.Context, gameID int64) ([]GamePlayerSummary, error)
 }
 
 func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
@@ -88,4 +102,31 @@ func (pg *PostgresGameStore) UpdateStatus(ctx context.Context, gameID int64, sta
 
 func (pg *PostgresGameStore) EndGame(ctx context.Context, code string) error {
 	return pg.queries.EndGame(ctx, code)
+}
+
+func (pg *PostgresGameStore) GetGameSummary(ctx context.Context, gameID int64) (*GameSummary, error) {
+	summary, err := pg.queries.GetGameSummaryStats(ctx, gameID)
+
+	return &GameSummary{
+		TotalRounds: summary.TotalRounds,
+		JokerCards:  summary.JokerCards,
+	}, err
+}
+
+func (pg *PostgresGameStore) GetGamePlayerStats(ctx context.Context, gameID int64) ([]GamePlayerSummary, error) {
+	dbPlayers, err := pg.queries.GetGamePlayerStats(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+
+	players := make([]GamePlayerSummary, len(dbPlayers))
+
+	for i, p := range dbPlayers {
+		players[i] = GamePlayerSummary{
+			ID:              p.ID,
+			Nickname:        p.Nickname,
+			JokerCardsDrawn: int32(p.JokerCardsDrawn),
+		}
+	}
+	return players, nil
 }

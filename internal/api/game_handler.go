@@ -80,3 +80,19 @@ func (h *GameHandler) HandleEndGame(c *gin.Context) {
 
 	httpx.SuccessResponse(c, gin.H{"message": "game ended"})
 }
+
+func (h *GameHandler) GetGameSummary(c *gin.Context) {
+	gameAny, exists := c.Get("game")
+	if !exists {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("missing game in context"))
+		return
+	}
+	game := gameAny.(*store.Game)
+
+	summary, err := h.gameService.GetGameSummaryByCode(c.Request.Context(), game.ID)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, errors.New("failed to get game summary"))
+		return
+	}
+	httpx.SuccessResponse(c, summary)
+}

@@ -33,3 +33,15 @@ WHERE id = $1;
 SELECT id, nickname, is_host, game_id
 FROM players
 WHERE game_id = $1 AND nickname = $2;
+
+-- name: GetGamePlayerStats :many
+SELECT
+  p.id,
+  p.nickname,
+  COUNT(r.*) AS joker_cards_drawn
+FROM players p
+JOIN rounds r ON r.answer_player_id = p.id
+WHERE r.game_id = $1
+  AND r.is_joker = TRUE
+GROUP BY p.id, p.nickname
+ORDER BY p.id;

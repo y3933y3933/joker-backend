@@ -98,6 +98,26 @@ func (q *Queries) FindLastRoundByGameID(ctx context.Context, gameID int64) (Find
 	return i, err
 }
 
+const getGameSummaryStats = `-- name: GetGameSummaryStats :one
+SELECT 
+  COUNT(*) AS total_rounds,
+  COUNT(*) FILTER (WHERE is_joker = TRUE) AS joker_cards
+FROM rounds
+WHERE game_id = $1
+`
+
+type GetGameSummaryStatsRow struct {
+	TotalRounds int64
+	JokerCards  int64
+}
+
+func (q *Queries) GetGameSummaryStats(ctx context.Context, gameID int64) (GetGameSummaryStatsRow, error) {
+	row := q.db.QueryRow(ctx, getGameSummaryStats, gameID)
+	var i GetGameSummaryStatsRow
+	err := row.Scan(&i.TotalRounds, &i.JokerCards)
+	return i, err
+}
+
 const getRoundByID = `-- name: GetRoundByID :one
 SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker, status, deck  
 FROM rounds WHERE id = $1

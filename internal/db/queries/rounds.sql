@@ -44,3 +44,10 @@ FROM rounds
 WHERE game_id = $1
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- name: GetGameSummaryStats :one
+SELECT 
+  COUNT(*) AS total_rounds,
+  COUNT(*) FILTER (WHERE is_joker = TRUE) AS joker_cards
+FROM rounds
+WHERE game_id = $1;

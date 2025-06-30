@@ -152,6 +152,45 @@ func (q *Queries) FindPlayersByGameID(ctx context.Context, gameID int64) ([]Find
 	return items, nil
 }
 
+const getGamePlayerStats = `-- name: GetGamePlayerStats :many
+SELECT
+  p.id,
+  p.nickname,
+  COUNT(r.*) AS joker_cards_drawn
+FROM players p
+JOIN rounds r ON r.answer_player_id = p.id
+WHERE r.game_id = $1
+  AND r.is_joker = TRUE
+GROUP BY p.id, p.nickname
+ORDER BY p.id
+`
+
+type GetGamePlayerStatsRow struct {
+	ID              int64
+	Nickname        string
+	JokerCardsDrawn int64
+}
+
+func (q *Queries) GetGamePlayerStats(ctx context.Context, gameID int64) ([]GetGamePlayerStatsRow, error) {
+	rows, err := q.db.Query(ctx, getGamePlayerStats, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGamePlayerStatsRow
+	for rows.Next() {
+		var i GetGamePlayerStatsRow
+		if err := rows.Scan(&i.ID, &i.Nickname, &i.JokerCardsDrawn); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateHost = `-- name: UpdateHost :exec
 UPDATE players
 SET is_host = $2

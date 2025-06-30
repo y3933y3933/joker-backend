@@ -61,3 +61,21 @@ func (s *GameService) EndGame(ctx context.Context, code string, status string) e
 
 	return s.gameStore.EndGame(ctx, code)
 }
+
+func (s *GameService) GetGameSummaryByCode(ctx context.Context, gameID int64) (*store.GameSummary, error) {
+	stats, err := s.gameStore.GetGameSummary(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+
+	playerStats, err := s.gameStore.GetGamePlayerStats(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &store.GameSummary{
+		TotalRounds: stats.TotalRounds,
+		JokerCards:  stats.JokerCards,
+		Players:     playerStats,
+	}, nil
+}
