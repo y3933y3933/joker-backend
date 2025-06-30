@@ -173,8 +173,7 @@ func (q *Queries) GetRoundWithQuestion(ctx context.Context, id int64) (GetRoundW
 const setRoundQuestion = `-- name: SetRoundQuestion :exec
 UPDATE rounds
 SET question_id = $1,
-    status = 'waiting_for_answer',
-    updated_at = NOW()
+    status = 'waiting_for_answer'
 WHERE id = $2
 `
 
@@ -191,8 +190,7 @@ func (q *Queries) SetRoundQuestion(ctx context.Context, arg SetRoundQuestionPara
 const updateAnswer = `-- name: UpdateAnswer :exec
 UPDATE rounds
 SET answer = $2,
-    status = $3,
-    updated_at = NOW()
+    status = $3
 WHERE id = $1
 `
 
@@ -210,8 +208,7 @@ func (q *Queries) UpdateAnswer(ctx context.Context, arg UpdateAnswerParams) erro
 const updateDrawResult = `-- name: UpdateDrawResult :exec
 UPDATE rounds
 SET is_joker = $2,
-    status = $3,
-    updated_at = NOW()
+    status = $3
 WHERE id = $1
 `
 

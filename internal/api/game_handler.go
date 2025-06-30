@@ -39,10 +39,10 @@ func (h *GameHandler) HandleCreateGame(c *gin.Context) {
 }
 
 func (h *GameHandler) HandleGetQuestions(c *gin.Context) {
-	limitStr := c.DefaultQuery("limit", "5")
+	limitStr := c.DefaultQuery("limit", "3")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 {
-		limit = 5
+		limit = 3
 	}
 
 	questions, err := h.questionService.ListRandomQuestions(c.Request.Context(), limit)

@@ -13,8 +13,7 @@ RETURNING id, game_id, question_id, answer, question_player_id,
 -- name: SetRoundQuestion :exec
 UPDATE rounds
 SET question_id = $1,
-    status = 'waiting_for_answer',
-    updated_at = NOW()
+    status = 'waiting_for_answer'
 WHERE id = $2;
 
 -- name: GetRoundByID :one
@@ -30,15 +29,13 @@ WHERE r.id = $1;
 -- name: UpdateAnswer :exec
 UPDATE rounds
 SET answer = $2,
-    status = $3,
-    updated_at = NOW()
+    status = $3
 WHERE id = $1;
 
 -- name: UpdateDrawResult :exec
 UPDATE rounds
 SET is_joker = $2,
-    status = $3,
-    updated_at = NOW()
+    status = $3
 WHERE id = $1;
 
 -- name: FindLastRoundByGameID :one
