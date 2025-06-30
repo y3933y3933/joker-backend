@@ -62,7 +62,7 @@ func (q *Queries) CreateRound(ctx context.Context, arg CreateRoundParams) (Round
 }
 
 const findLastRoundByGameID = `-- name: FindLastRoundByGameID :one
-SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker
+SELECT id, game_id, question_id, answer, question_player_id, answer_player_id, is_joker,status,deck
 FROM rounds
 WHERE game_id = $1
 ORDER BY created_at DESC
@@ -77,6 +77,8 @@ type FindLastRoundByGameIDRow struct {
 	QuestionPlayerID int64
 	AnswerPlayerID   int64
 	IsJoker          pgtype.Bool
+	Status           string
+	Deck             []string
 }
 
 func (q *Queries) FindLastRoundByGameID(ctx context.Context, gameID int64) (FindLastRoundByGameIDRow, error) {
@@ -90,6 +92,8 @@ func (q *Queries) FindLastRoundByGameID(ctx context.Context, gameID int64) (Find
 		&i.QuestionPlayerID,
 		&i.AnswerPlayerID,
 		&i.IsJoker,
+		&i.Status,
+		&i.Deck,
 	)
 	return i, err
 }
