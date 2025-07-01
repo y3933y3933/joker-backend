@@ -33,7 +33,6 @@ func (r *Room) Run() {
 		select {
 		case client := <-r.join:
 			fmt.Printf("Run: received join from client ID=%d\n", client.ID)
-
 			r.mu.Lock()
 			r.clients[client] = true
 			r.clientsByID[client.ID] = client
@@ -41,7 +40,6 @@ func (r *Room) Run() {
 
 		case client := <-r.leave:
 			fmt.Printf("Client ID=%d left room %s. (before delete) current clientsByID: %v\n", client.ID, r.Code, r.clientsByID)
-
 			r.mu.Lock()
 			delete(r.clients, client)
 			delete(r.clientsByID, client.ID)
@@ -63,6 +61,7 @@ func (r *Room) Broadcast(msg any) {
 }
 
 func (r *Room) SendTo(playerID int64, msg any) {
+
 	data, _ := json.Marshal(msg)
 	r.mu.RLock()
 	defer r.mu.RUnlock()
