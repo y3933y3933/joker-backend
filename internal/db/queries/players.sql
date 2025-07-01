@@ -38,10 +38,9 @@ WHERE game_id = $1 AND nickname = $2;
 SELECT
   p.id,
   p.nickname,
-  COUNT(r.*) AS joker_cards_drawn
+  COUNT(CASE WHEN r.is_joker = TRUE THEN 1 END) AS joker_cards_drawn
 FROM players p
-JOIN rounds r ON r.answer_player_id = p.id
-WHERE r.game_id = $1
-  AND r.is_joker = TRUE
+LEFT JOIN rounds r ON r.answer_player_id = p.id AND r.game_id = $1
+WHERE p.game_id = $1
 GROUP BY p.id, p.nickname
 ORDER BY p.id;

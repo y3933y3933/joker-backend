@@ -65,6 +65,7 @@ func (h *Handler) ServeWS(c *gin.Context) {
 			left, newHost, err := h.PlayerService.LeaveGame(context.Background(), playerID)
 			if err != nil {
 				h.Logger.Error("Failed to remove player", "error", err)
+				return
 			}
 
 			msg1, _ := NewWSMessage(MsgPlayerLeft, PlayerLeftPayload{
