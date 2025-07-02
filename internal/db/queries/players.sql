@@ -14,6 +14,12 @@ FROM players
 WHERE game_id = $1
 ORDER BY id;
 
+-- name: FindOnlinePlayersByGameID :many
+SELECT id, nickname, game_id, is_host, status
+FROM players
+WHERE game_id = $1 AND status = 'online';
+
+
 -- name: DeletePlayerByID :exec
 DELETE FROM players WHERE id = $1;
 
@@ -45,9 +51,12 @@ WHERE p.game_id = $1
 GROUP BY p.id, p.nickname
 ORDER BY p.id;
 
-
-
-
 -- name: GetPlayerCountByGameCode :one
 SELECT COUNT(*) FROM players
 WHERE game_id = (SELECT id FROM games WHERE code = $1);
+
+
+-- name: UpdatePlayerStatus :exec
+UPDATE players
+SET status = $2
+WHERE id = $1;

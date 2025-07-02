@@ -75,7 +75,7 @@ func (s *PlayerService) LeaveGame(ctx context.Context, playerID int64) (left *st
 	}
 
 	if player.IsHost {
-		players, err := s.playerStore.FindPlayersByGameID(ctx, player.GameID)
+		players, err := s.playerStore.FindOnlinePlayersByGameID(ctx, player.GameID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -90,4 +90,8 @@ func (s *PlayerService) LeaveGame(ctx context.Context, playerID int64) (left *st
 	}
 
 	return player, nil, nil
+}
+
+func (s *PlayerService) MarkPlayerDisconnected(ctx context.Context, playerID int64) error {
+	return s.playerStore.UpdatePlayerStatus(ctx, playerID, store.PlayerStatusOffline)
 }

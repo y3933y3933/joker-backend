@@ -66,6 +66,46 @@ func (q *Queries) DeletePlayerByID(ctx context.Context, id int64) error {
 	return err
 }
 
+const findOnlinePlayersByGameID = `-- name: FindOnlinePlayersByGameID :many
+SELECT id, nickname, game_id, is_host, status
+FROM players
+WHERE game_id = $1 AND status = 'online'
+`
+
+type FindOnlinePlayersByGameIDRow struct {
+	ID       int64
+	Nickname string
+	GameID   int64
+	IsHost   pgtype.Bool
+	Status   string
+}
+
+func (q *Queries) FindOnlinePlayersByGameID(ctx context.Context, gameID int64) ([]FindOnlinePlayersByGameIDRow, error) {
+	rows, err := q.db.Query(ctx, findOnlinePlayersByGameID, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []FindOnlinePlayersByGameIDRow
+	for rows.Next() {
+		var i FindOnlinePlayersByGameIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Nickname,
+			&i.GameID,
+			&i.IsHost,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const findPlayerByID = `-- name: FindPlayerByID :one
 SELECT id, nickname, is_host, game_id, status
 FROM players
@@ -229,5 +269,21 @@ type UpdateHostParams struct {
 
 func (q *Queries) UpdateHost(ctx context.Context, arg UpdateHostParams) error {
 	_, err := q.db.Exec(ctx, updateHost, arg.ID, arg.IsHost)
+	return err
+}
+
+const updatePlayerStatus = `-- name: UpdatePlayerStatus :exec
+UPDATE players
+SET status = $2
+WHERE id = $1
+`
+
+type UpdatePlayerStatusParams struct {
+	ID     int64
+	Status string
+}
+
+func (q *Queries) UpdatePlayerStatus(ctx context.Context, arg UpdatePlayerStatusParams) error {
+	_, err := q.db.Exec(ctx, updatePlayerStatus, arg.ID, arg.Status)
 	return err
 }

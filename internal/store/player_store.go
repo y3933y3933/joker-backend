@@ -34,11 +34,13 @@ type PlayerStore interface {
 	Create(ctx context.Context, player *Player) (*Player, error)
 	CountPlayerInGame(ctx context.Context, gameID int64) (int64, error)
 	FindPlayersByGameID(ctx context.Context, gameID int64) ([]*Player, error)
+	FindOnlinePlayersByGameID(ctx context.Context, gameID int64) ([]*Player, error)
 	DeleteByID(ctx context.Context, id int64) error
 	FindByID(ctx context.Context, id int64) (*Player, error)
 	UpdateHost(ctx context.Context, id int64, isHost bool) error
 	FindByNickname(ctx context.Context, gameID int64, nickname string) (*Player, error)
 	GetPlayerCountByGameCode(ctx context.Context, gameCode string) (int64, error)
+	UpdatePlayerStatus(ctx context.Context, playerID int64, status string) error
 }
 
 func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Player, error) {
@@ -142,4 +144,31 @@ func (pg *PostgresPlayerStore) FindByNickname(ctx context.Context, gameID int64,
 
 func (pg *PostgresPlayerStore) GetPlayerCountByGameCode(ctx context.Context, gameCode string) (int64, error) {
 	return pg.queries.GetPlayerCountByGameCode(ctx, gameCode)
+}
+
+func (pg *PostgresPlayerStore) UpdatePlayerStatus(ctx context.Context, playerID int64, status string) error {
+	args := sqlc.UpdatePlayerStatusParams{
+		ID:     playerID,
+		Status: status,
+	}
+	return pg.queries.UpdatePlayerStatus(ctx, args)
+}
+
+func (pg *PostgresPlayerStore) FindOnlinePlayersByGameID(ctx context.Context, gameID int64) ([]*Player, error) {
+	dbPlayers, err := pg.queries.FindOnlinePlayersByGameID(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+
+	players := make([]*Player, 0, len(dbPlayers))
+	for _, p := range dbPlayers {
+		players = append(players, &Player{
+			ID:       p.ID,
+			Nickname: p.Nickname,
+			IsHost:   p.IsHost.Bool,
+			GameID:   p.GameID,
+			Status:   p.Status,
+		})
+	}
+	return players, nil
 }

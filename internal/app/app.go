@@ -70,7 +70,7 @@ func NewApplication() (*Application, error) {
 	gameHandler := api.NewGameHandler(gameService, questionService, hub, logger)
 	playerHandler := api.NewPlayerHandler(playerService, hub, logger)
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
-	wsHandler := ws.NewHandler(hub, logger, playerService, gameService)
+	wsHandler := ws.NewHandler(hub, logger, playerService, gameService, roundService)
 
 	app := &Application{
 		Config: cfg,

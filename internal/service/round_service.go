@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"math/rand"
 
@@ -31,7 +32,7 @@ func (s *RoundService) StartGame(ctx context.Context, game *store.Game) (*store.
 	if game.Status != store.GameStatusWaiting {
 		return nil, errx.ErrInvalidGameStatus
 	}
-	players, err := s.playerStore.FindPlayersByGameID(ctx, game.ID)
+	players, err := s.playerStore.FindOnlinePlayersByGameID(ctx, game.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -167,11 +168,14 @@ func (s *RoundService) DrawCard(ctx context.Context, roundID, playerID int64, in
 }
 
 func (s *RoundService) CreateNextRound(ctx context.Context, game *store.Game) (*store.Round, error) {
-	players, err := s.playerStore.FindPlayersByGameID(ctx, game.ID)
+	players, err := s.playerStore.FindOnlinePlayersByGameID(ctx, game.ID)
 	if err != nil {
 		return nil, err
 	}
-	if len(players) < MIN_GAME_NUM {
+
+	fmt.Println(len(players))
+
+	if len(players) < 2 {
 		return nil, errx.ErrNotEnoughPlayers
 	}
 
@@ -230,17 +234,21 @@ func getNextPair(players []*store.Player, lastQuestionerID int64) (questioner, a
 	return players[qIndex], players[aIndex]
 }
 
-func (s *RoundService) SkipRound(ctx context.Context, game *store.Game, roundID int64) error {
+func (s *RoundService) SkipRound(ctx context.Context, game *store.Game, roundID int64) (*store.Round, error) {
 	err := s.roundStore.UpdateRoundStatus(ctx, roundID, store.RoundStatusDone)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = s.CreateNextRound(ctx, game)
+	newRound, err := s.CreateNextRound(ctx, game)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return newRound, nil
 
+}
+
+func (s *RoundService) FindLastRoundByGameID(ctx context.Context, gameID int64) (*store.Round, error) {
+	return s.roundStore.FindLastRoundByGameID(ctx, gameID)
 }

@@ -94,3 +94,7 @@ func (s *GameService) DeleteGameIfEmpty(ctx context.Context, gameCode string) er
 
 	return s.gameStore.DeleteByCode(ctx, gameCode)
 }
+
+func (s *GameService) GetGameByCode(ctx context.Context, gameCode string) (*store.Game, error) {
+	return s.gameStore.GetGameByCode(ctx, gameCode)
+}

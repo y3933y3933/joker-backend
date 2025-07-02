@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/y3933y3933/joker/internal/service"
+	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/errx"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
 )
@@ -28,11 +29,12 @@ type Handler struct {
 	Logger        *slog.Logger
 	PlayerService *service.PlayerService
 	GameService   *service.GameService
+	RoundService  *service.RoundService
 }
 
 // NewHandler 用來建立新的 WebSocket handler
-func NewHandler(hub *Hub, logger *slog.Logger, playerService *service.PlayerService, gameService *service.GameService) *Handler {
-	return &Handler{Hub: hub, Logger: logger, PlayerService: playerService, GameService: gameService}
+func NewHandler(hub *Hub, logger *slog.Logger, playerService *service.PlayerService, gameService *service.GameService, roundService *service.RoundService) *Handler {
+	return &Handler{Hub: hub, Logger: logger, PlayerService: playerService, GameService: gameService, RoundService: roundService}
 
 }
 
@@ -66,38 +68,92 @@ func (h *Handler) ServeWS(c *gin.Context) {
 		OnDisconnect: func(playerID int64) {
 			ctx := context.Background()
 			left, newHost, err := h.PlayerService.LeaveGame(ctx, playerID)
-			if err != nil {
+			// success
+			if err == nil {
+				// ✅ 廣播離開訊息
+				msg1, _ := NewWSMessage(MsgPlayerLeft, PlayerLeftPayload{
+					ID:       left.ID,
+					Nickname: left.Nickname,
+				})
+				room.Broadcast(msg1)
+
+				// ✅ 如果有 host 轉移，廣播
+				if newHost != nil {
+					msg2, _ := NewWSMessage(MsgHostTransferred, HostTransferredPayload{
+						ID:       newHost.ID,
+						Nickname: newHost.Nickname,
+					})
+					room.Broadcast(msg2)
+				}
+
+				// // 如果房內沒人，自動刪除 game
+				// if room.PlayerCount() == 0 {
+				// 	h.GameService.DeleteGameIfEmpty(ctx, gameCode)
+				// 	h.Hub.DeleteRoom(gameCode)
+				// }
+			} else {
 				if errors.Is(err, errx.ErrGameAlreadyStarted) {
-					// ✅ 遊戲中，不移除玩家，但仍可以標記離線（未來用）
 					h.Logger.Info("Player disconnected during game", "playerID", playerID)
-					// TODO: 可在這裡呼叫 MarkPlayerDisconnected()
+					// ✅ 遊戲中：標記為離線
+					err = h.PlayerService.MarkPlayerDisconnected(ctx, playerID)
+					if err != nil {
+						h.Logger.Error("MarkPlayerDisconnected failed", "error", err)
+						return
+					}
+
+					// 查找目前回合
+					game, err := h.GameService.GetGameByCode(ctx, gameCode)
+					if err != nil {
+						h.Logger.Error("FindByID(game) failed", "error", err)
+						return
+					}
+
+					round, err := h.RoundService.FindLastRoundByGameID(ctx, game.ID)
+					if err != nil {
+						h.Logger.Error("FindCurrentRoundByGameID failed", "error", err)
+						return
+					}
+
+					isQuestionPlayer := round.Status == store.RoundStatusWaitingForQuestion && round.QuestionPlayerID == playerID
+					isAnswerPlayer := (round.Status == store.RoundStatusWaitingForAnswer || round.Status == store.RoundStatusWaitingForDraw) && round.AnswerPlayerID == playerID
+
+					if isQuestionPlayer || isAnswerPlayer {
+						newRound, err := h.RoundService.SkipRound(ctx, game, round.ID)
+						if err != nil {
+							if errors.Is(err, errx.ErrNotEnoughPlayers) {
+								// 結束遊戲
+								err := h.GameService.EndGame(ctx, gameCode, store.GameStatusPlaying)
+								if err != nil {
+									h.Logger.Error("End game failed", "error", err)
+									return
+								}
+								msg, _ := NewWSMessage(MsgTypeGameEnded, gin.H{"gameCode": game.Code})
+								room.Broadcast(msg)
+
+								return
+							}
+							h.Logger.Error("SkipRound failed", "error", err)
+							return
+						}
+
+						msg, _ := NewWSMessage(MsgTypeRoundSkipped, RoundSkippedPayload{
+							Reason: "disconnect",
+							RoundStartedPayload: RoundStartedPayload{
+								RoundID:          newRound.ID,
+								QuestionPlayerID: newRound.QuestionPlayerID,
+								AnswererID:       newRound.AnswerPlayerID,
+							},
+						})
+						room.Broadcast(msg)
+
+					}
+
 				} else {
 					h.Logger.Error("LeaveGame failed", "error", err)
 				}
 				return
 			}
 
-			// ✅ 廣播離開訊息
-			msg1, _ := NewWSMessage(MsgPlayerLeft, PlayerLeftPayload{
-				ID:       left.ID,
-				Nickname: left.Nickname,
-			})
-			room.Broadcast(msg1)
-
-			// ✅ 如果有 host 轉移，廣播
-			if newHost != nil {
-				msg2, _ := NewWSMessage(MsgHostTransferred, HostTransferredPayload{
-					ID:       newHost.ID,
-					Nickname: newHost.Nickname,
-				})
-				room.Broadcast(msg2)
-			}
-
-			// 如果房內沒人，自動刪除 game
-			if room.PlayerCount() == 0 {
-				h.GameService.DeleteGameIfEmpty(ctx, gameCode)
-				h.Hub.DeleteRoom(gameCode)
-			}
 		},
 	}
 
@@ -106,5 +162,3 @@ func (h *Handler) ServeWS(c *gin.Context) {
 	go client.writePump()
 	go client.readPump()
 }
-
-func (h *Handler) OnDisconnect(playerID int64) {}

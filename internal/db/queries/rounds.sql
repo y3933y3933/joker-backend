@@ -56,3 +56,4 @@ WHERE game_id = $1;
 UPDATE rounds
 SET status = $2
 WHERE id = $1;
+

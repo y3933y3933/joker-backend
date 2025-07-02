@@ -19,6 +19,7 @@ const (
 	MsgNextRoundStarted    = "next_round_started"
 	MsgPlayerLeft          = "player_left"
 	MsgHostTransferred     = "host_transferred"
+	MsgTypeRoundSkipped    = "round_skipped"
 )
 
 type PlayerJoinedPayload struct {
@@ -50,6 +51,11 @@ type HostTransferredPayload struct {
 
 type AnswerSubmittedPayload struct {
 	Answer string `json:"answer"`
+}
+
+type RoundSkippedPayload struct {
+	Reason string `json:"reason"`
+	RoundStartedPayload
 }
 
 // NewWSMessage creates a new WSMessage from any data struct or map.
