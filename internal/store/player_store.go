@@ -32,6 +32,7 @@ type PlayerStore interface {
 	FindByID(ctx context.Context, id int64) (*Player, error)
 	UpdateHost(ctx context.Context, id int64, isHost bool) error
 	FindByNickname(ctx context.Context, gameID int64, nickname string) (*Player, error)
+	GetPlayerCountByGameCode(ctx context.Context, gameCode string) (int64, error)
 }
 
 func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Player, error) {
@@ -123,4 +124,8 @@ func (pg *PostgresPlayerStore) FindByNickname(ctx context.Context, gameID int64,
 		IsHost:   fromPgBool(player.IsHost),
 		GameID:   player.GameID,
 	}, nil
+}
+
+func (pg *PostgresPlayerStore) GetPlayerCountByGameCode(ctx context.Context, gameCode string) (int64, error) {
+	return pg.queries.GetPlayerCountByGameCode(ctx, gameCode)
 }

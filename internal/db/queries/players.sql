@@ -45,3 +45,9 @@ WHERE p.game_id = $1
 GROUP BY p.id, p.nickname
 ORDER BY p.id;
 
+
+
+
+-- name: GetPlayerCountByGameCode :one
+SELECT COUNT(*) FROM players
+WHERE game_id = (SELECT id FROM games WHERE code = $1);

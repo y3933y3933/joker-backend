@@ -10,12 +10,14 @@ import (
 )
 
 type GameService struct {
-	gameStore store.GameStore
+	gameStore   store.GameStore
+	playerStore store.PlayerStore
 }
 
-func NewGameService(gameStore store.GameStore) *GameService {
+func NewGameService(gameStore store.GameStore, playerStore store.PlayerStore) *GameService {
 	return &GameService{
-		gameStore: gameStore,
+		gameStore:   gameStore,
+		playerStore: playerStore,
 	}
 }
 
@@ -78,4 +80,17 @@ func (s *GameService) GetGameSummaryByCode(ctx context.Context, gameID int64) (*
 		JokerCards:  stats.JokerCards,
 		Players:     playerStats,
 	}, nil
+}
+
+func (s *GameService) DeleteGameIfEmpty(ctx context.Context, gameCode string) error {
+	count, err := s.playerStore.GetPlayerCountByGameCode(ctx, gameCode)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	return s.gameStore.DeleteByCode(ctx, gameCode)
 }

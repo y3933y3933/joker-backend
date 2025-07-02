@@ -27,11 +27,12 @@ type Handler struct {
 	Hub           *Hub
 	Logger        *slog.Logger
 	PlayerService *service.PlayerService
+	GameService   *service.GameService
 }
 
 // NewHandler 用來建立新的 WebSocket handler
-func NewHandler(hub *Hub, logger *slog.Logger, playerService *service.PlayerService) *Handler {
-	return &Handler{Hub: hub, Logger: logger, PlayerService: playerService}
+func NewHandler(hub *Hub, logger *slog.Logger, playerService *service.PlayerService, gameService *service.GameService) *Handler {
+	return &Handler{Hub: hub, Logger: logger, PlayerService: playerService, GameService: gameService}
 
 }
 
@@ -92,12 +93,11 @@ func (h *Handler) ServeWS(c *gin.Context) {
 				room.Broadcast(msg2)
 			}
 
-			// ✅ 可選：如果房內沒人，自動刪除 game
-
-			// if room.PlayerCount() == 0 {
-			// 	// h.GameService.DeleteGameIfEmpty(ctx, gameCode)
-			// 	// h.Hub.DeleteRoom(gameCode)
-			// }
+			// 如果房內沒人，自動刪除 game
+			if room.PlayerCount() == 0 {
+				h.GameService.DeleteGameIfEmpty(ctx, gameCode)
+				h.Hub.DeleteRoom(gameCode)
+			}
 		},
 	}
 

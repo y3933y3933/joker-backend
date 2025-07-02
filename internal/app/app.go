@@ -58,7 +58,7 @@ func NewApplication() (*Application, error) {
 	questionStore := store.NewPostgresQuestionStore(queries)
 
 	// service
-	gameService := service.NewGameService(gameStore)
+	gameService := service.NewGameService(gameStore, playerStore)
 	playerService := service.NewPlayerService(playerStore, gameStore)
 	roundService := service.NewRoundService(roundStore, playerStore, gameStore)
 	questionService := service.NewQuestionService(questionStore)
@@ -70,7 +70,7 @@ func NewApplication() (*Application, error) {
 	gameHandler := api.NewGameHandler(gameService, questionService, hub, logger)
 	playerHandler := api.NewPlayerHandler(playerService, hub, logger)
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
-	wsHandler := ws.NewHandler(hub, logger, playerService)
+	wsHandler := ws.NewHandler(hub, logger, playerService, gameService)
 
 	app := &Application{
 		Config: cfg,

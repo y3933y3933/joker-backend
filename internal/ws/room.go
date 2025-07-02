@@ -77,6 +77,5 @@ func (r *Room) SendTo(playerID int64, msg any) {
 func (r *Room) PlayerCount() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-
 	return len(r.clientsByID)
 }

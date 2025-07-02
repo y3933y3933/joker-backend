@@ -190,6 +190,18 @@ func (q *Queries) GetGamePlayerStats(ctx context.Context, gameID int64) ([]GetGa
 	return items, nil
 }
 
+const getPlayerCountByGameCode = `-- name: GetPlayerCountByGameCode :one
+SELECT COUNT(*) FROM players
+WHERE game_id = (SELECT id FROM games WHERE code = $1)
+`
+
+func (q *Queries) GetPlayerCountByGameCode(ctx context.Context, code string) (int64, error) {
+	row := q.db.QueryRow(ctx, getPlayerCountByGameCode, code)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const updateHost = `-- name: UpdateHost :exec
 UPDATE players
 SET is_host = $2

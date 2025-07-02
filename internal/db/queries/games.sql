@@ -25,3 +25,7 @@ WHERE code = $1;
 SELECT status
 FROM games
 WHERE id = $1;
+
+-- name: DeleteByCode :exec
+DELETE FROM games WHERE code = $1;
+

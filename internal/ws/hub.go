@@ -30,3 +30,9 @@ func (h *Hub) CreateRoom(code string) *Room {
 	return room
 
 }
+
+func (h *Hub) DeleteRoom(code string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.rooms, code)
+}

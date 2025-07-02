@@ -50,6 +50,7 @@ type GameStore interface {
 	GetGameSummary(ctx context.Context, gameID int64) (*GameSummary, error)
 	GetGamePlayerStats(ctx context.Context, gameID int64) ([]GamePlayerSummary, error)
 	GetGameStatusByID(ctx context.Context, gameID int64) (string, error)
+	DeleteByCode(ctx context.Context, gameCode string) error
 }
 
 func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
@@ -142,4 +143,8 @@ func (pg *PostgresGameStore) GetGameStatusByID(ctx context.Context, gameID int64
 	}
 
 	return status, nil
+}
+
+func (pg *PostgresGameStore) DeleteByCode(ctx context.Context, gameCode string) error {
+	return pg.queries.DeleteByCode(ctx, gameCode)
 }

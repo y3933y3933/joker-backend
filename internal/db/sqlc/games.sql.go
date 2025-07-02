@@ -41,6 +41,15 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (CreateG
 	return i, err
 }
 
+const deleteByCode = `-- name: DeleteByCode :exec
+DELETE FROM games WHERE code = $1
+`
+
+func (q *Queries) DeleteByCode(ctx context.Context, code string) error {
+	_, err := q.db.Exec(ctx, deleteByCode, code)
+	return err
+}
+
 const endGame = `-- name: EndGame :exec
 UPDATE games
 SET status = 'ended',
