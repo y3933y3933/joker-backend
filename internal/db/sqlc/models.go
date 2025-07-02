@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Feedback struct {
+	ID        int64
+	Type      string
+	Content   string
+	CreatedAt pgtype.Timestamptz
+}
+
 type Game struct {
 	ID        int64
 	Code      string

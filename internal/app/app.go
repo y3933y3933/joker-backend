@@ -27,14 +27,15 @@ type db struct {
 }
 
 type Application struct {
-	Config        config
-	Logger        *slog.Logger
-	DB            *db
-	GameHandler   *api.GameHandler
-	GameStore     *store.PostgresGameStore
-	PlayerHandler *api.PlayerHandler
-	RoundHandler  *api.RoundHandler
-	WSHandler     *ws.Handler
+	Config          config
+	Logger          *slog.Logger
+	DB              *db
+	GameHandler     *api.GameHandler
+	GameStore       *store.PostgresGameStore
+	PlayerHandler   *api.PlayerHandler
+	RoundHandler    *api.RoundHandler
+	FeedbackHandler *api.FeedbackHandler
+	WSHandler       *ws.Handler
 }
 
 func NewApplication() (*Application, error) {
@@ -56,12 +57,14 @@ func NewApplication() (*Application, error) {
 	playerStore := store.NewPostgresPlayerStore(queries)
 	roundStore := store.NewPostgresRoundStore(queries)
 	questionStore := store.NewPostgresQuestionStore(queries)
+	feedbackStore := store.NewPostgresFeedStore(queries)
 
 	// service
 	gameService := service.NewGameService(gameStore, playerStore)
 	playerService := service.NewPlayerService(playerStore, gameStore)
 	roundService := service.NewRoundService(roundStore, playerStore, gameStore)
 	questionService := service.NewQuestionService(questionStore)
+	feedbackService := service.NewFeedbackService(feedbackStore)
 
 	// ws
 	hub := ws.NewHub()
@@ -71,6 +74,7 @@ func NewApplication() (*Application, error) {
 	playerHandler := api.NewPlayerHandler(playerService, hub, logger)
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
 	wsHandler := ws.NewHandler(hub, logger, playerService, gameService, roundService)
+	feedbackHandler := api.NewFeedbackHandler(logger, feedbackService)
 
 	app := &Application{
 		Config: cfg,
@@ -79,11 +83,12 @@ func NewApplication() (*Application, error) {
 			ConnPool: pgDB,
 			Queries:  queries,
 		},
-		GameHandler:   gameHandler,
-		GameStore:     gameStore,
-		PlayerHandler: playerHandler,
-		RoundHandler:  roundHandler,
-		WSHandler:     wsHandler,
+		GameHandler:     gameHandler,
+		GameStore:       gameStore,
+		PlayerHandler:   playerHandler,
+		RoundHandler:    roundHandler,
+		WSHandler:       wsHandler,
+		FeedbackHandler: feedbackHandler,
 	}
 	return app, nil
 }

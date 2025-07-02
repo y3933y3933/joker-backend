@@ -53,6 +53,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		}
 
 	}
+
+	router.POST("/api/feedback", app.FeedbackHandler.HandleCreateFeedback)
 	// ws
 	router.GET("/ws/games/:code", app.WSHandler.ServeWS)
 
