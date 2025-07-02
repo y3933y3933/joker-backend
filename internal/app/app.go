@@ -65,7 +65,7 @@ func NewApplication() (*Application, error) {
 
 	// ws
 	hub := ws.NewHub()
-	wsHandler := ws.NewHandler(hub, logger, playerService)
+	wsHandler := ws.NewHandler(hub, logger)
 
 	// handler
 	gameHandler := api.NewGameHandler(gameService, questionService, hub, logger)

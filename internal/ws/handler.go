@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/y3933y3933/joker/internal/service"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
 )
 
@@ -23,14 +21,13 @@ var upgrader = websocket.Upgrader{
 
 // Handler struct 用來包裝 Hub 實例
 type Handler struct {
-	Hub           *Hub
-	Logger        *slog.Logger
-	PlayerService *service.PlayerService
+	Hub    *Hub
+	Logger *slog.Logger
 }
 
 // NewHandler 用來建立新的 WebSocket handler
-func NewHandler(hub *Hub, logger *slog.Logger, playerService *service.PlayerService) *Handler {
-	return &Handler{Hub: hub, Logger: logger, PlayerService: playerService}
+func NewHandler(hub *Hub, logger *slog.Logger) *Handler {
+	return &Handler{Hub: hub, Logger: logger}
 
 }
 
@@ -61,27 +58,6 @@ func (h *Handler) ServeWS(c *gin.Context) {
 		conn: conn,
 		send: make(chan []byte, 256),
 		room: room,
-		OnDisconnect: func(gameCode string, playerID int64) {
-			left, newHost, err := h.PlayerService.LeaveGame(context.Background(), playerID)
-			if err != nil {
-				h.Logger.Error("Failed to remove player", "error", err)
-				return
-			}
-
-			msg1, _ := NewWSMessage(MsgPlayerLeft, PlayerLeftPayload{
-				ID:       left.ID,
-				Nickname: left.Nickname,
-			})
-			room.Broadcast(msg1)
-
-			if newHost != nil {
-				msg2, _ := NewWSMessage(MsgHostTransferred, HostTransferredPayload{
-					ID:       newHost.ID,
-					Nickname: newHost.Nickname,
-				})
-				room.Broadcast(msg2)
-			}
-		},
 	}
 
 	room.join <- client
