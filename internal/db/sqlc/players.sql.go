@@ -25,9 +25,9 @@ func (q *Queries) CountPlayersInGame(ctx context.Context, gameID int64) (int64, 
 }
 
 const createPlayer = `-- name: CreatePlayer :one
-INSERT INTO players(game_id, nickname, is_host)
-VALUES($1, $2, $3)
-RETURNING id, game_id,nickname, is_host, joined_at
+INSERT INTO players(game_id, nickname, is_host, status)
+VALUES($1, $2, $3, 'online')
+RETURNING id, game_id,nickname, is_host, status
 `
 
 type CreatePlayerParams struct {
@@ -36,15 +36,23 @@ type CreatePlayerParams struct {
 	IsHost   pgtype.Bool
 }
 
-func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (Player, error) {
+type CreatePlayerRow struct {
+	ID       int64
+	GameID   int64
+	Nickname string
+	IsHost   pgtype.Bool
+	Status   string
+}
+
+func (q *Queries) CreatePlayer(ctx context.Context, arg CreatePlayerParams) (CreatePlayerRow, error) {
 	row := q.db.QueryRow(ctx, createPlayer, arg.GameID, arg.Nickname, arg.IsHost)
-	var i Player
+	var i CreatePlayerRow
 	err := row.Scan(
 		&i.ID,
 		&i.GameID,
 		&i.Nickname,
 		&i.IsHost,
-		&i.JoinedAt,
+		&i.Status,
 	)
 	return i, err
 }
@@ -59,7 +67,7 @@ func (q *Queries) DeletePlayerByID(ctx context.Context, id int64) error {
 }
 
 const findPlayerByID = `-- name: FindPlayerByID :one
-SELECT id, nickname, is_host, game_id
+SELECT id, nickname, is_host, game_id, status
 FROM players
 WHERE id = $1
 `
@@ -69,6 +77,7 @@ type FindPlayerByIDRow struct {
 	Nickname string
 	IsHost   pgtype.Bool
 	GameID   int64
+	Status   string
 }
 
 func (q *Queries) FindPlayerByID(ctx context.Context, id int64) (FindPlayerByIDRow, error) {
@@ -79,12 +88,13 @@ func (q *Queries) FindPlayerByID(ctx context.Context, id int64) (FindPlayerByIDR
 		&i.Nickname,
 		&i.IsHost,
 		&i.GameID,
+		&i.Status,
 	)
 	return i, err
 }
 
 const findPlayerByNickname = `-- name: FindPlayerByNickname :one
-SELECT id, nickname, is_host, game_id
+SELECT id, nickname, is_host, game_id, status
 FROM players
 WHERE game_id = $1 AND nickname = $2
 `
@@ -99,6 +109,7 @@ type FindPlayerByNicknameRow struct {
 	Nickname string
 	IsHost   pgtype.Bool
 	GameID   int64
+	Status   string
 }
 
 func (q *Queries) FindPlayerByNickname(ctx context.Context, arg FindPlayerByNicknameParams) (FindPlayerByNicknameRow, error) {
@@ -109,12 +120,13 @@ func (q *Queries) FindPlayerByNickname(ctx context.Context, arg FindPlayerByNick
 		&i.Nickname,
 		&i.IsHost,
 		&i.GameID,
+		&i.Status,
 	)
 	return i, err
 }
 
 const findPlayersByGameID = `-- name: FindPlayersByGameID :many
-SELECT id, nickname, is_host, game_id
+SELECT id, nickname, is_host, game_id, status
 FROM players
 WHERE game_id = $1
 ORDER BY id
@@ -125,6 +137,7 @@ type FindPlayersByGameIDRow struct {
 	Nickname string
 	IsHost   pgtype.Bool
 	GameID   int64
+	Status   string
 }
 
 func (q *Queries) FindPlayersByGameID(ctx context.Context, gameID int64) ([]FindPlayersByGameIDRow, error) {
@@ -141,6 +154,7 @@ func (q *Queries) FindPlayersByGameID(ctx context.Context, gameID int64) ([]Find
 			&i.Nickname,
 			&i.IsHost,
 			&i.GameID,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}

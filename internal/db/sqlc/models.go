@@ -22,6 +22,7 @@ type Player struct {
 	Nickname string
 	IsHost   pgtype.Bool
 	JoinedAt pgtype.Timestamptz
+	Status   string
 }
 
 type Question struct {

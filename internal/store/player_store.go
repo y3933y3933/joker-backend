@@ -14,7 +14,13 @@ type Player struct {
 	Nickname string `json:"nickname"`
 	IsHost   bool   `json:"isHost"`
 	GameID   int64  `json:"gameID"`
+	Status   string `json:"status"`
 }
+
+const (
+	PlayerStatusOnline  = "online"
+	PlayerStatusOffline = "offline"
+)
 
 type PostgresPlayerStore struct {
 	queries *sqlc.Queries
@@ -48,8 +54,13 @@ func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Pla
 		return nil, err
 	}
 
-	player.ID = row.ID
-	return player, nil
+	return &Player{
+		ID:       row.ID,
+		Nickname: row.Nickname,
+		IsHost:   fromPgBool(row.IsHost),
+		GameID:   row.GameID,
+		Status:   row.Status,
+	}, nil
 
 }
 
@@ -74,6 +85,7 @@ func (pg *PostgresPlayerStore) FindPlayersByGameID(ctx context.Context, gameID i
 			Nickname: p.Nickname,
 			IsHost:   p.IsHost.Bool,
 			GameID:   p.GameID,
+			Status:   p.Status,
 		})
 	}
 	return players, nil
@@ -97,6 +109,7 @@ func (pg *PostgresPlayerStore) FindByID(ctx context.Context, id int64) (*Player,
 		Nickname: res.Nickname,
 		IsHost:   fromPgBool(res.IsHost),
 		GameID:   res.GameID,
+		Status:   res.Status,
 	}, nil
 }
 
@@ -123,6 +136,7 @@ func (pg *PostgresPlayerStore) FindByNickname(ctx context.Context, gameID int64,
 		Nickname: player.Nickname,
 		IsHost:   fromPgBool(player.IsHost),
 		GameID:   player.GameID,
+		Status:   player.Status,
 	}, nil
 }
 

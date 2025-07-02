@@ -1,7 +1,7 @@
 -- name: CreatePlayer :one 
-INSERT INTO players(game_id, nickname, is_host)
-VALUES($1, $2, $3)
-RETURNING id, game_id,nickname, is_host, joined_at;
+INSERT INTO players(game_id, nickname, is_host, status)
+VALUES($1, $2, $3, 'online')
+RETURNING id, game_id,nickname, is_host, status;
 
 -- name: CountPlayersInGame :one
 SELECT COUNT(*)
@@ -9,7 +9,7 @@ FROM players
 WHERE game_id = $1;
 
 -- name: FindPlayersByGameID :many
-SELECT id, nickname, is_host, game_id
+SELECT id, nickname, is_host, game_id, status
 FROM players
 WHERE game_id = $1
 ORDER BY id;
@@ -20,7 +20,7 @@ DELETE FROM players WHERE id = $1;
 
 
 -- name: FindPlayerByID :one
-SELECT id, nickname, is_host, game_id
+SELECT id, nickname, is_host, game_id, status
 FROM players
 WHERE id = $1;
 
@@ -30,7 +30,7 @@ SET is_host = $2
 WHERE id = $1;
 
 -- name: FindPlayerByNickname :one
-SELECT id, nickname, is_host, game_id
+SELECT id, nickname, is_host, game_id, status
 FROM players
 WHERE game_id = $1 AND nickname = $2;
 
