@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/y3933y3933/joker/internal/service"
+	"github.com/y3933y3933/joker/internal/utils/errx"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
 )
 
@@ -21,13 +24,14 @@ var upgrader = websocket.Upgrader{
 
 // Handler struct 用來包裝 Hub 實例
 type Handler struct {
-	Hub    *Hub
-	Logger *slog.Logger
+	Hub           *Hub
+	Logger        *slog.Logger
+	PlayerService *service.PlayerService
 }
 
 // NewHandler 用來建立新的 WebSocket handler
-func NewHandler(hub *Hub, logger *slog.Logger) *Handler {
-	return &Handler{Hub: hub, Logger: logger}
+func NewHandler(hub *Hub, logger *slog.Logger, playerService *service.PlayerService) *Handler {
+	return &Handler{Hub: hub, Logger: logger, PlayerService: playerService}
 
 }
 
@@ -58,6 +62,43 @@ func (h *Handler) ServeWS(c *gin.Context) {
 		conn: conn,
 		send: make(chan []byte, 256),
 		room: room,
+		OnDisconnect: func(playerID int64) {
+			ctx := context.Background()
+			left, newHost, err := h.PlayerService.LeaveGame(ctx, playerID)
+			if err != nil {
+				if errors.Is(err, errx.ErrGameAlreadyStarted) {
+					// ✅ 遊戲中，不移除玩家，但仍可以標記離線（未來用）
+					h.Logger.Info("Player disconnected during game", "playerID", playerID)
+					// TODO: 可在這裡呼叫 MarkPlayerDisconnected()
+				} else {
+					h.Logger.Error("LeaveGame failed", "error", err)
+				}
+				return
+			}
+
+			// ✅ 廣播離開訊息
+			msg1, _ := NewWSMessage(MsgPlayerLeft, PlayerLeftPayload{
+				ID:       left.ID,
+				Nickname: left.Nickname,
+			})
+			room.Broadcast(msg1)
+
+			// ✅ 如果有 host 轉移，廣播
+			if newHost != nil {
+				msg2, _ := NewWSMessage(MsgHostTransferred, HostTransferredPayload{
+					ID:       newHost.ID,
+					Nickname: newHost.Nickname,
+				})
+				room.Broadcast(msg2)
+			}
+
+			// ✅ 可選：如果房內沒人，自動刪除 game
+
+			// if room.PlayerCount() == 0 {
+			// 	// h.GameService.DeleteGameIfEmpty(ctx, gameCode)
+			// 	// h.Hub.DeleteRoom(gameCode)
+			// }
+		},
 	}
 
 	room.join <- client

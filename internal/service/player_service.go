@@ -60,6 +60,15 @@ func (s *PlayerService) LeaveGame(ctx context.Context, playerID int64) (left *st
 		return nil, nil, err
 	}
 
+	gameStatus, err := s.gameStore.GetGameStatusByID(ctx, player.GameID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if gameStatus != store.GameStatusWaiting {
+		return nil, nil, errx.ErrGameAlreadyStarted
+	}
+
 	err = s.playerStore.DeleteByID(ctx, playerID)
 	if err != nil {
 		return nil, nil, err

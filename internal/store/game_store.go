@@ -49,6 +49,7 @@ type GameStore interface {
 	EndGame(ctx context.Context, code string) error
 	GetGameSummary(ctx context.Context, gameID int64) (*GameSummary, error)
 	GetGamePlayerStats(ctx context.Context, gameID int64) ([]GamePlayerSummary, error)
+	GetGameStatusByID(ctx context.Context, gameID int64) (string, error)
 }
 
 func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
@@ -129,4 +130,16 @@ func (pg *PostgresGameStore) GetGamePlayerStats(ctx context.Context, gameID int6
 		}
 	}
 	return players, nil
+}
+
+func (pg *PostgresGameStore) GetGameStatusByID(ctx context.Context, gameID int64) (string, error) {
+	status, err := pg.queries.GetGameStatusByID(ctx, gameID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", errx.ErrGameNotFound
+		}
+		return "", err
+	}
+
+	return status, nil
 }

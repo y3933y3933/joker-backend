@@ -65,12 +65,12 @@ func NewApplication() (*Application, error) {
 
 	// ws
 	hub := ws.NewHub()
-	wsHandler := ws.NewHandler(hub, logger)
 
 	// handler
 	gameHandler := api.NewGameHandler(gameService, questionService, hub, logger)
 	playerHandler := api.NewPlayerHandler(playerService, hub, logger)
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
+	wsHandler := ws.NewHandler(hub, logger, playerService)
 
 	app := &Application{
 		Config: cfg,

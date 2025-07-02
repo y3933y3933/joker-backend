@@ -19,3 +19,9 @@ UPDATE games
 SET status = 'ended',
     updated_at = NOW()
 WHERE code = $1;
+
+
+-- name: GetGameStatusByID :one
+SELECT status
+FROM games
+WHERE id = $1;

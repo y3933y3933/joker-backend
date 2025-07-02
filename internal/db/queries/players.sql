@@ -44,3 +44,4 @@ LEFT JOIN rounds r ON r.answer_player_id = p.id AND r.game_id = $1
 WHERE p.game_id = $1
 GROUP BY p.id, p.nickname
 ORDER BY p.id;
+

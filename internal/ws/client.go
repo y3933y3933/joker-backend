@@ -7,10 +7,11 @@ import (
 )
 
 type Client struct {
-	ID   int64           // 玩家 ID，供單播使用
-	conn *websocket.Conn // WebSocket 實際連線
-	send chan []byte     // 發送訊息用的 channel
-	room *Room           // 所屬房間
+	ID           int64           // 玩家 ID，供單播使用
+	conn         *websocket.Conn // WebSocket 實際連線
+	send         chan []byte     // 發送訊息用的 channel
+	room         *Room           // 所屬房間
+	OnDisconnect func(playerID int64)
 }
 
 func (c *Client) readPump() {
@@ -36,6 +37,10 @@ func (c *Client) writePump() {
 
 func (c *Client) disconnect() {
 	c.room.leave <- c
+
 	_ = c.conn.Close()
+	if c.OnDisconnect != nil {
+		c.OnDisconnect(c.ID)
+	}
 
 }

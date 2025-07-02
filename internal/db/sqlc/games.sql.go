@@ -72,6 +72,19 @@ func (q *Queries) GetGameByCode(ctx context.Context, code string) (Game, error) 
 	return i, err
 }
 
+const getGameStatusByID = `-- name: GetGameStatusByID :one
+SELECT status
+FROM games
+WHERE id = $1
+`
+
+func (q *Queries) GetGameStatusByID(ctx context.Context, id int64) (string, error) {
+	row := q.db.QueryRow(ctx, getGameStatusByID, id)
+	var status string
+	err := row.Scan(&status)
+	return status, err
+}
+
 const updateGameStatus = `-- name: UpdateGameStatus :exec
 UPDATE games
 SET status = $2,
