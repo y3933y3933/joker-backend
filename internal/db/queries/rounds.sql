@@ -51,3 +51,8 @@ SELECT
   COUNT(*) FILTER (WHERE is_joker = TRUE) AS joker_cards
 FROM rounds
 WHERE game_id = $1;
+
+-- name: UpdateRoundStatus :exec
+UPDATE rounds
+SET status = $2
+WHERE id = $1;

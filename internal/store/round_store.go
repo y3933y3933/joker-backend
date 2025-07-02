@@ -50,6 +50,7 @@ type RoundStore interface {
 	UpdateAnswer(ctx context.Context, roundID int64, answer string, status string) error
 	UpdateDrawResult(ctx context.Context, roundID int64, isJoker bool, status string) error
 	FindLastRoundByGameID(ctx context.Context, gameID int64) (*Round, error)
+	UpdateRoundStatus(ctx context.Context, roundID int64, status string) error
 }
 
 func (pg *PostgresRoundStore) Create(ctx context.Context, round *Round) (*Round, error) {
@@ -158,7 +159,6 @@ func (pg *PostgresRoundStore) UpdateDrawResult(ctx context.Context, roundID int6
 	return pg.queries.UpdateDrawResult(ctx, args)
 }
 
-// PostgresRoundStore 實作
 func (pg *PostgresRoundStore) FindLastRoundByGameID(ctx context.Context, gameID int64) (*Round, error) {
 	res, err := pg.queries.FindLastRoundByGameID(ctx, gameID)
 	if err != nil {
@@ -179,4 +179,12 @@ func (pg *PostgresRoundStore) FindLastRoundByGameID(ctx context.Context, gameID 
 		Status:           res.Status,
 		Deck:             res.Deck,
 	}, nil
+}
+
+func (pg *PostgresRoundStore) UpdateRoundStatus(ctx context.Context, roundID int64, status string) error {
+	args := sqlc.UpdateRoundStatusParams{
+		ID:     roundID,
+		Status: status,
+	}
+	return pg.queries.UpdateRoundStatus(ctx, args)
 }

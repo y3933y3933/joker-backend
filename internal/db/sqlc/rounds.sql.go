@@ -244,3 +244,19 @@ func (q *Queries) UpdateDrawResult(ctx context.Context, arg UpdateDrawResultPara
 	_, err := q.db.Exec(ctx, updateDrawResult, arg.ID, arg.IsJoker, arg.Status)
 	return err
 }
+
+const updateRoundStatus = `-- name: UpdateRoundStatus :exec
+UPDATE rounds
+SET status = $2
+WHERE id = $1
+`
+
+type UpdateRoundStatusParams struct {
+	ID     int64
+	Status string
+}
+
+func (q *Queries) UpdateRoundStatus(ctx context.Context, arg UpdateRoundStatusParams) error {
+	_, err := q.db.Exec(ctx, updateRoundStatus, arg.ID, arg.Status)
+	return err
+}

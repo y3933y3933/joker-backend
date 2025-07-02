@@ -214,7 +214,6 @@ func (s *RoundService) generateRound(ctx context.Context, gameID int64, players 
 	return round, nil
 }
 
-// getNextPair 找到下一輪的 questioner 與 answerer（環狀輪替）
 func getNextPair(players []*store.Player, lastQuestionerID int64) (questioner, answerer *store.Player) {
 	n := len(players)
 	var qIndex int
@@ -229,4 +228,19 @@ func getNextPair(players []*store.Player, lastQuestionerID int64) (questioner, a
 
 	aIndex := (qIndex + 1) % n // 下一位成為回答者
 	return players[qIndex], players[aIndex]
+}
+
+func (s *RoundService) SkipRound(ctx context.Context, game *store.Game, roundID int64) error {
+	err := s.roundStore.UpdateRoundStatus(ctx, roundID, store.RoundStatusDone)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.CreateNextRound(ctx, game)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }

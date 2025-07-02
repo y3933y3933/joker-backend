@@ -106,3 +106,5 @@ func (h *Handler) ServeWS(c *gin.Context) {
 	go client.writePump()
 	go client.readPump()
 }
+
+func (h *Handler) OnDisconnect(playerID int64) {}
