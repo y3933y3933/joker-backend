@@ -20,6 +20,7 @@ const (
 	MsgPlayerLeft          = "player_left"
 	MsgHostTransferred     = "host_transferred"
 	MsgTypeRoundSkipped    = "round_skipped"
+	MsgTypePlayerOffline   = "player_disconnected"
 )
 
 type PlayerJoinedPayload struct {
@@ -69,4 +70,9 @@ func NewWSMessage(msgType string, data any) (WSMessage, error) {
 		Type: msgType,
 		Data: b,
 	}, nil
+}
+
+type PlayerOfflinePayload struct {
+	ID       int64  `json:"id"`
+	Nickname string `json:"nickname"`
 }

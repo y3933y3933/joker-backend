@@ -19,7 +19,7 @@ type Player struct {
 
 const (
 	PlayerStatusOnline  = "online"
-	PlayerStatusOffline = "offline"
+	PlayerStatusOffline = "disconnected"
 )
 
 type PostgresPlayerStore struct {

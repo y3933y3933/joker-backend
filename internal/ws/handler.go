@@ -67,10 +67,26 @@ func (h *Handler) ServeWS(c *gin.Context) {
 		room: room,
 		OnDisconnect: func(playerID int64) {
 			ctx := context.Background()
-			left, newHost, err := h.PlayerService.LeaveGame(ctx, playerID)
-			// success
-			if err == nil {
-				// ✅ 廣播離開訊息
+
+			player, err := h.PlayerService.FindPlayerByID(ctx, playerID)
+			if err != nil {
+				h.Logger.Error("FindByID failed", "error", err)
+				return
+			}
+
+			game, err := h.GameService.GetGameByCode(ctx, gameCode)
+			if err != nil {
+				h.Logger.Error("GetGameByCode failed", "error", err)
+				return
+			}
+
+			switch game.Status {
+			case store.GameStatusWaiting:
+				left, newHost, err := h.PlayerService.LeaveGame(ctx, playerID)
+				if err != nil {
+					h.Logger.Error("LeaveGame failed", "error", err)
+					return
+				}
 				msg1, _ := NewWSMessage(MsgPlayerLeft, PlayerLeftPayload{
 					ID:       left.ID,
 					Nickname: left.Nickname,
@@ -85,73 +101,65 @@ func (h *Handler) ServeWS(c *gin.Context) {
 					})
 					room.Broadcast(msg2)
 				}
+			case store.GameStatusPlaying:
+				err := h.PlayerService.MarkPlayerDisconnected(ctx, playerID)
+				if err != nil {
+					h.Logger.Error("MarkPlayerDisconnected failed", "error", err)
+					return
+				}
 
-				// // 如果房內沒人，自動刪除 game
-				// if room.PlayerCount() == 0 {
-				// 	h.GameService.DeleteGameIfEmpty(ctx, gameCode)
-				// 	h.Hub.DeleteRoom(gameCode)
-				// }
-			} else {
-				if errors.Is(err, errx.ErrGameAlreadyStarted) {
-					h.Logger.Info("Player disconnected during game", "playerID", playerID)
-					// ✅ 遊戲中：標記為離線
-					err = h.PlayerService.MarkPlayerDisconnected(ctx, playerID)
+				msgOffline, _ := NewWSMessage(MsgTypePlayerOffline, PlayerOfflinePayload{
+					ID:       playerID,
+					Nickname: player.Nickname,
+				})
+				room.Broadcast(msgOffline)
+
+				if player.IsHost {
+					newHost, err := h.PlayerService.TransferHost(ctx, player)
 					if err != nil {
-						h.Logger.Error("MarkPlayerDisconnected failed", "error", err)
+						h.Logger.Error("FindOnlinePlayers failed", "error", err)
 						return
 					}
+					msg, _ := NewWSMessage(MsgHostTransferred, HostTransferredPayload{
+						ID:       newHost.ID,
+						Nickname: newHost.Nickname,
+					})
+					room.Broadcast(msg)
+				}
 
-					// 查找目前回合
-					game, err := h.GameService.GetGameByCode(ctx, gameCode)
+				round, err := h.RoundService.FindLastRoundByGameID(ctx, game.ID)
+				if err != nil {
+					h.Logger.Error("FindLastRoundByGameID failed", "error", err)
+					return
+				}
+
+				isQuestion := round.Status == store.RoundStatusWaitingForQuestion && round.QuestionPlayerID == playerID
+				isAnswer := (round.Status == store.RoundStatusWaitingForAnswer || round.Status == store.RoundStatusWaitingForDraw) && round.AnswerPlayerID == playerID
+				if isQuestion || isAnswer {
+					newRound, err := h.RoundService.SkipRound(ctx, game, round.ID)
 					if err != nil {
-						h.Logger.Error("FindByID(game) failed", "error", err)
-						return
-					}
-
-					round, err := h.RoundService.FindLastRoundByGameID(ctx, game.ID)
-					if err != nil {
-						h.Logger.Error("FindCurrentRoundByGameID failed", "error", err)
-						return
-					}
-
-					isQuestionPlayer := round.Status == store.RoundStatusWaitingForQuestion && round.QuestionPlayerID == playerID
-					isAnswerPlayer := (round.Status == store.RoundStatusWaitingForAnswer || round.Status == store.RoundStatusWaitingForDraw) && round.AnswerPlayerID == playerID
-
-					if isQuestionPlayer || isAnswerPlayer {
-						newRound, err := h.RoundService.SkipRound(ctx, game, round.ID)
-						if err != nil {
-							if errors.Is(err, errx.ErrNotEnoughPlayers) {
-								// 結束遊戲
-								err := h.GameService.EndGame(ctx, gameCode, store.GameStatusPlaying)
-								if err != nil {
-									h.Logger.Error("End game failed", "error", err)
-									return
-								}
-								msg, _ := NewWSMessage(MsgTypeGameEnded, gin.H{"gameCode": game.Code})
-								room.Broadcast(msg)
-
-								return
-							}
-							h.Logger.Error("SkipRound failed", "error", err)
+						if errors.Is(err, errx.ErrNotEnoughPlayers) {
+							// 遊戲結束
+							_ = h.GameService.EndGame(ctx, game.Code, store.GameStatusPlaying)
+							msg, _ := NewWSMessage(MsgTypeGameEnded, gin.H{"gameCode": game.Code})
+							room.Broadcast(msg)
 							return
 						}
-
-						msg, _ := NewWSMessage(MsgTypeRoundSkipped, RoundSkippedPayload{
-							Reason: "disconnect",
-							RoundStartedPayload: RoundStartedPayload{
-								RoundID:          newRound.ID,
-								QuestionPlayerID: newRound.QuestionPlayerID,
-								AnswererID:       newRound.AnswerPlayerID,
-							},
-						})
-						room.Broadcast(msg)
-
+						h.Logger.Error("SkipRound failed", "error", err)
+						return
 					}
 
-				} else {
-					h.Logger.Error("LeaveGame failed", "error", err)
+					msg, _ := NewWSMessage(MsgTypeRoundSkipped, RoundSkippedPayload{
+						Reason: fmt.Sprintf("%s disconnect", player.Nickname),
+						RoundStartedPayload: RoundStartedPayload{
+							RoundID:          newRound.ID,
+							QuestionPlayerID: newRound.QuestionPlayerID,
+							AnswererID:       newRound.AnswerPlayerID,
+						},
+					})
+					room.Broadcast(msg)
 				}
-				return
+
 			}
 
 		},

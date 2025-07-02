@@ -75,23 +75,37 @@ func (s *PlayerService) LeaveGame(ctx context.Context, playerID int64) (left *st
 	}
 
 	if player.IsHost {
-		players, err := s.playerStore.FindOnlinePlayersByGameID(ctx, player.GameID)
+		newHost, err := s.TransferHost(ctx, player)
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(players) > 0 {
-			newHost := players[0]
-			err = s.playerStore.UpdateHost(ctx, newHost.ID, true)
-			if err != nil {
-				return nil, nil, err
-			}
-			return player, newHost, nil
-		}
+		return player, newHost, nil
+
 	}
 
 	return player, nil, nil
 }
 
+func (s *PlayerService) TransferHost(ctx context.Context, player *store.Player) (*store.Player, error) {
+	players, err := s.playerStore.FindOnlinePlayersByGameID(ctx, player.GameID)
+	if err != nil {
+		return nil, err
+	}
+	if len(players) > 0 {
+		newHost := players[0]
+		err = s.playerStore.UpdateHost(ctx, newHost.ID, true)
+		if err != nil {
+			return nil, err
+		}
+		return newHost, nil
+	}
+	return nil, errx.ErrNotEnoughPlayers
+}
+
 func (s *PlayerService) MarkPlayerDisconnected(ctx context.Context, playerID int64) error {
 	return s.playerStore.UpdatePlayerStatus(ctx, playerID, store.PlayerStatusOffline)
+}
+
+func (s *PlayerService) FindPlayerByID(ctx context.Context, playerID int64) (*store.Player, error) {
+	return s.playerStore.FindByID(ctx, playerID)
 }
