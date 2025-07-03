@@ -83,4 +83,8 @@ audit:
 .PHONY: build
 build:
 	@echo 'Building...'
-	go build -o=./bin/app .
+	go build -ldflags='-s' -o=./bin/api .
+	GOOS=linux GOARCH=amd64 go build -ldflags='-s' -o=./bin/linux_amd64/api .
+
+
+
