@@ -4,6 +4,13 @@
 
 
 joker.jienian.tw { 
-	reverse_proxy localhost:4000
+	root * /srv/www/frontend
+	file_server
+
+	handle /api/* {
+		reverse_proxy localhost:4000
+	}
+
+	
 }
 
