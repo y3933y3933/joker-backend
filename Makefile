@@ -88,3 +88,33 @@ build:
 
 
 
+# ==================================================================================== # 
+# PRODUCTION
+# ==================================================================================== #
+
+production_host_ip = '167.172.93.121'
+
+## production/connect: connect to the production server
+.PHONY: production/connect 
+production/connect:
+	ssh joker@${production_host_ip}
+
+
+
+## production/deploy/api: deploy the api to production
+.PHONY: production/deploy/api 
+production/deploy/api:
+	rsync -P ./bin/linux_amd64/api joker@${production_host_ip}:~
+	rsync -rP --delete ./migrations joker@${production_host_ip}:~
+	rsync -P ./remote/production/api.service joker@${production_host_ip}:~
+	rsync -P ./remote/production/Caddyfile joker@${production_host_ip}:~
+	ssh -t joker@${production_host_ip} '\
+	goose -dir ~/migrations postgres $$JOKER_DB_DSN up \
+	&& sudo mv ~/api.service /etc/systemd/system/ \
+	&& sudo systemctl enable api \
+	&& sudo systemctl restart api \
+	&& sudo mv ~/Caddyfile /etc/caddy/ \
+	&& sudo systemctl reload caddy \
+	'
+
+	
