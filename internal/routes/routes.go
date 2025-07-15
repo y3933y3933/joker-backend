@@ -58,5 +58,11 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	// ws
 	router.GET("/ws/games/:code", app.WSHandler.ServeWS)
 
+	// admin
+	admin := router.Group("/api/admin")
+	{
+		admin.POST("/users", app.UserHandler.HandleRegisterUser)
+	}
+
 	return router
 }

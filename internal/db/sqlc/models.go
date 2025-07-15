@@ -52,3 +52,10 @@ type Round struct {
 	CreatedAt        pgtype.Timestamptz
 	Deck             []string
 }
+
+type User struct {
+	ID           int64
+	Username     string
+	PasswordHash []byte
+	CreatedAt    pgtype.Timestamptz
+}

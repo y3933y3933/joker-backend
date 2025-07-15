@@ -14,3 +14,7 @@ var (
 	ErrDuplicateNickname  = errors.New("nickname already taken")
 	ErrGameAlreadyStarted = errors.New("cannot leave, game has already started")
 )
+
+var (
+	ErrDuplicateUsername = errors.New("username already taken")
+)

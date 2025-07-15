@@ -35,6 +35,7 @@ type Application struct {
 	PlayerHandler   *api.PlayerHandler
 	RoundHandler    *api.RoundHandler
 	FeedbackHandler *api.FeedbackHandler
+	UserHandler     *api.UserHandler
 	WSHandler       *ws.Handler
 }
 
@@ -58,6 +59,7 @@ func NewApplication() (*Application, error) {
 	roundStore := store.NewPostgresRoundStore(queries)
 	questionStore := store.NewPostgresQuestionStore(queries)
 	feedbackStore := store.NewPostgresFeedStore(queries)
+	userStore := store.NewPostgresUserStore(queries)
 
 	// service
 	gameService := service.NewGameService(gameStore, playerStore)
@@ -65,6 +67,7 @@ func NewApplication() (*Application, error) {
 	roundService := service.NewRoundService(roundStore, playerStore, gameStore)
 	questionService := service.NewQuestionService(questionStore)
 	feedbackService := service.NewFeedbackService(feedbackStore)
+	userService := service.NewUserStore(userStore)
 
 	// ws
 	hub := ws.NewHub()
@@ -75,6 +78,7 @@ func NewApplication() (*Application, error) {
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
 	wsHandler := ws.NewHandler(hub, logger, playerService, gameService, roundService)
 	feedbackHandler := api.NewFeedbackHandler(logger, feedbackService)
+	userHandler := api.NewUserHandler(userService, logger)
 
 	app := &Application{
 		Config: cfg,
@@ -87,6 +91,7 @@ func NewApplication() (*Application, error) {
 		GameStore:       gameStore,
 		PlayerHandler:   playerHandler,
 		RoundHandler:    roundHandler,
+		UserHandler:     userHandler,
 		WSHandler:       wsHandler,
 		FeedbackHandler: feedbackHandler,
 	}
