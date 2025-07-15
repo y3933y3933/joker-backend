@@ -6,15 +6,15 @@ import (
 	"github.com/y3933y3933/joker/internal/store"
 )
 
-type UserService struct {
+type AuthService struct {
 	userStore store.UserStore
 }
 
-func NewUserStore(userStore store.UserStore) *UserService {
-	return &UserService{userStore: userStore}
+func NewAuthService(userStore store.UserStore) *AuthService {
+	return &AuthService{userStore: userStore}
 }
 
-func (s *UserService) CreateUser(ctx context.Context, username, password string) (*store.User, error) {
+func (s *AuthService) CreateUser(ctx context.Context, username, password string) (*store.User, error) {
 	user := &store.User{
 		Username: username,
 	}

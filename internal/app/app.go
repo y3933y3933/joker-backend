@@ -67,7 +67,7 @@ func NewApplication() (*Application, error) {
 	roundService := service.NewRoundService(roundStore, playerStore, gameStore)
 	questionService := service.NewQuestionService(questionStore)
 	feedbackService := service.NewFeedbackService(feedbackStore)
-	userService := service.NewUserStore(userStore)
+	authService := service.NewAuthService(userStore)
 
 	// ws
 	hub := ws.NewHub()
@@ -78,7 +78,7 @@ func NewApplication() (*Application, error) {
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
 	wsHandler := ws.NewHandler(hub, logger, playerService, gameService, roundService)
 	feedbackHandler := api.NewFeedbackHandler(logger, feedbackService)
-	userHandler := api.NewUserHandler(userService, logger)
+	userHandler := api.NewUserHandler(authService, logger)
 
 	app := &Application{
 		Config: cfg,
