@@ -16,9 +16,10 @@ import (
 )
 
 type config struct {
-	Port   int
-	Env    string
-	DB_URL string
+	Port       int
+	Env        string
+	DB_URL     string
+	JWT_SECRET string
 }
 
 type db struct {
@@ -35,7 +36,7 @@ type Application struct {
 	PlayerHandler   *api.PlayerHandler
 	RoundHandler    *api.RoundHandler
 	FeedbackHandler *api.FeedbackHandler
-	UserHandler     *api.UserHandler
+	AuthHandler     *api.AuthHandler
 	WSHandler       *ws.Handler
 }
 
@@ -44,6 +45,7 @@ func NewApplication() (*Application, error) {
 	flag.IntVar(&cfg.Port, "port", 8080, "API server port")
 	flag.StringVar(&cfg.Env, "env", "dev", "Environment (dev|prod)")
 	flag.StringVar(&cfg.DB_URL, "db", "", "database url")
+	flag.StringVar(&cfg.JWT_SECRET, "jwt-secret", "", "JWT Secret")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -67,7 +69,7 @@ func NewApplication() (*Application, error) {
 	roundService := service.NewRoundService(roundStore, playerStore, gameStore)
 	questionService := service.NewQuestionService(questionStore)
 	feedbackService := service.NewFeedbackService(feedbackStore)
-	authService := service.NewAuthService(userStore)
+	authService := service.NewAuthService(userStore, []byte(cfg.JWT_SECRET))
 
 	// ws
 	hub := ws.NewHub()
@@ -78,7 +80,7 @@ func NewApplication() (*Application, error) {
 	roundHandler := api.NewRoundHandler(roundService, logger, hub)
 	wsHandler := ws.NewHandler(hub, logger, playerService, gameService, roundService)
 	feedbackHandler := api.NewFeedbackHandler(logger, feedbackService)
-	userHandler := api.NewUserHandler(authService, logger)
+	authHandler := api.NewAuthHandler(authService, logger)
 
 	app := &Application{
 		Config: cfg,
@@ -91,7 +93,7 @@ func NewApplication() (*Application, error) {
 		GameStore:       gameStore,
 		PlayerHandler:   playerHandler,
 		RoundHandler:    roundHandler,
-		UserHandler:     userHandler,
+		AuthHandler:     authHandler,
 		WSHandler:       wsHandler,
 		FeedbackHandler: feedbackHandler,
 	}

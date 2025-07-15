@@ -61,7 +61,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	// admin
 	admin := router.Group("/api/admin")
 	{
-		admin.POST("/users", app.UserHandler.HandleRegisterUser)
+		admin.POST("/users", app.AuthHandler.HandleRegisterUser)
+		admin.POST("/login", app.AuthHandler.HandleLogin)
 	}
 
 	return router

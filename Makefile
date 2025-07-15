@@ -25,7 +25,7 @@ confirm:
 .PHONY: run
 run:
 	@echo 'Running application...'
-	go run . -port=${PORT} -env=${ENV} -db=${DB_URL}
+	go run . -port=${PORT} -env=${ENV} -db=${DB_URL} -jwt-secret=${JWT_SECRET}
 
 ## db/psql: connect to the database using psql
 .PHONY: db/psql

@@ -31,3 +31,7 @@ func SuccessResponse(c *gin.Context, data any) {
 func ForbiddenResponse(c *gin.Context, err error) {
 	c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": err.Error()})
 }
+
+func UnAuthorized(c *gin.Context, err error) {
+	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+}

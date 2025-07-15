@@ -16,5 +16,6 @@ var (
 )
 
 var (
-	ErrDuplicateUsername = errors.New("username already taken")
+	ErrDuplicateUsername  = errors.New("username already taken")
+	ErrInvalidCredentials = errors.New("invalid username or password")
 )

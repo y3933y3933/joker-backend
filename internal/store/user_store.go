@@ -41,7 +41,7 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 }
 
 type User struct {
-	ID       int      `json:"id"`
+	ID       int64    `json:"id"`
 	Username string   `json:"username"`
 	Password password `json:"-"`
 }
@@ -56,7 +56,7 @@ func NewPostgresUserStore(queries *sqlc.Queries) *PostgresUserStore {
 
 type UserStore interface {
 	Create(ctx context.Context, user *User) error
-	// GetUserByUsername(ctx context.Context, username string) (*User, error)
+	GetUserByUsername(ctx context.Context, username string) (*User, error)
 }
 
 func (pg *PostgresUserStore) Create(ctx context.Context, user *User) error {
@@ -76,4 +76,21 @@ func (pg *PostgresUserStore) Create(ctx context.Context, user *User) error {
 		return err
 	}
 	return nil
+}
+
+func (pg *PostgresUserStore) GetUserByUsername(ctx context.Context, username string) (*User, error) {
+	row, err := pg.queries.GetUserByUsername(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	password := password{
+		hash: row.PasswordHash,
+	}
+
+	return &User{
+		ID:       row.ID,
+		Username: username,
+		Password: password,
+	}, nil
 }
