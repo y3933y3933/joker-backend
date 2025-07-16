@@ -41,6 +41,7 @@ type PlayerStore interface {
 	FindByNickname(ctx context.Context, gameID int64, nickname string) (*Player, error)
 	GetPlayerCountByGameCode(ctx context.Context, gameCode string) (int64, error)
 	UpdatePlayerStatus(ctx context.Context, playerID int64, status string) error
+	GetLivePlayerCount(ctx context.Context) (int64, error)
 }
 
 func (pg *PostgresPlayerStore) Create(ctx context.Context, player *Player) (*Player, error) {
@@ -171,4 +172,8 @@ func (pg *PostgresPlayerStore) FindOnlinePlayersByGameID(ctx context.Context, ga
 		})
 	}
 	return players, nil
+}
+
+func (pg *PostgresPlayerStore) GetLivePlayerCount(ctx context.Context) (int64, error) {
+	return pg.queries.GetLivePlayerCount(ctx)
 }

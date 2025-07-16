@@ -51,6 +51,8 @@ type GameStore interface {
 	GetGamePlayerStats(ctx context.Context, gameID int64) ([]GamePlayerSummary, error)
 	GetGameStatusByID(ctx context.Context, gameID int64) (string, error)
 	DeleteByCode(ctx context.Context, gameCode string) error
+	GetGamesTodayCount(ctx context.Context) (int64, error)
+	GetActiveRoomsCount(ctx context.Context) (int64, error)
 }
 
 func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
@@ -147,4 +149,12 @@ func (pg *PostgresGameStore) GetGameStatusByID(ctx context.Context, gameID int64
 
 func (pg *PostgresGameStore) DeleteByCode(ctx context.Context, gameCode string) error {
 	return pg.queries.DeleteByCode(ctx, gameCode)
+}
+
+func (pg *PostgresGameStore) GetGamesTodayCount(ctx context.Context) (int64, error) {
+	return pg.queries.GetGamesTodayCount(ctx)
+}
+
+func (pg *PostgresGameStore) GetActiveRoomsCount(ctx context.Context) (int64, error) {
+	return pg.queries.GetActiveRoomsCount(ctx)
 }

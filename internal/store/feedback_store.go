@@ -24,6 +24,7 @@ func NewPostgresFeedStore(queries *sqlc.Queries) *PostgresFeedbackStore {
 
 type FeedbackStore interface {
 	Create(context.Context, *Feedback) error
+	CountRecentFeedbacksOneMonth(context.Context) (int64, error)
 }
 
 func (pg *PostgresFeedbackStore) Create(ctx context.Context, feedback *Feedback) error {
@@ -31,4 +32,8 @@ func (pg *PostgresFeedbackStore) Create(ctx context.Context, feedback *Feedback)
 		Type:    feedback.Type,
 		Content: feedback.Content,
 	})
+}
+
+func (pg *PostgresFeedbackStore) CountRecentFeedbacksOneMonth(ctx context.Context) (int64, error) {
+	return pg.queries.CountRecentFeedbacksOneMonth(ctx)
 }

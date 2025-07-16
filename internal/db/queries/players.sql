@@ -60,3 +60,8 @@ WHERE game_id = (SELECT id FROM games WHERE code = $1);
 UPDATE players
 SET status = $2
 WHERE id = $1;
+
+-- name: GetLivePlayerCount :one
+SELECT COUNT(*) AS live_player_count
+FROM players
+WHERE status = 'online';

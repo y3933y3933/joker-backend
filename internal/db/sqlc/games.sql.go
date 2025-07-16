@@ -62,6 +62,19 @@ func (q *Queries) EndGame(ctx context.Context, code string) error {
 	return err
 }
 
+const getActiveRoomsCount = `-- name: GetActiveRoomsCount :one
+SELECT COUNT(*) AS active_rooms
+FROM games
+WHERE status != 'ended'
+`
+
+func (q *Queries) GetActiveRoomsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getActiveRoomsCount)
+	var active_rooms int64
+	err := row.Scan(&active_rooms)
+	return active_rooms, err
+}
+
 const getGameByCode = `-- name: GetGameByCode :one
 SELECT id, code , status, created_at, updated_at 
 FROM games
@@ -92,6 +105,19 @@ func (q *Queries) GetGameStatusByID(ctx context.Context, id int64) (string, erro
 	var status string
 	err := row.Scan(&status)
 	return status, err
+}
+
+const getGamesTodayCount = `-- name: GetGamesTodayCount :one
+SELECT COUNT(*) AS games_today
+FROM games
+WHERE created_at >= CURRENT_DATE
+`
+
+func (q *Queries) GetGamesTodayCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getGamesTodayCount)
+	var games_today int64
+	err := row.Scan(&games_today)
+	return games_today, err
 }
 
 const updateGameStatus = `-- name: UpdateGameStatus :exec

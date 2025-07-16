@@ -29,3 +29,19 @@ WHERE id = $1;
 -- name: DeleteByCode :exec
 DELETE FROM games WHERE code = $1;
 
+
+
+-- name: GetGamesTodayCount :one
+SELECT COUNT(*) AS games_today
+FROM games
+WHERE created_at >= CURRENT_DATE;
+
+
+
+-- name: GetActiveRoomsCount :one
+SELECT COUNT(*) AS active_rooms
+FROM games
+WHERE status != 'ended';
+
+
+

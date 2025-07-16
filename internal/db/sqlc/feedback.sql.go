@@ -9,6 +9,19 @@ import (
 	"context"
 )
 
+const countRecentFeedbacksOneMonth = `-- name: CountRecentFeedbacksOneMonth :one
+SELECT COUNT(*) AS feedback_count
+FROM feedback
+WHERE created_at >= (CURRENT_DATE - INTERVAL '30 days')
+`
+
+func (q *Queries) CountRecentFeedbacksOneMonth(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countRecentFeedbacksOneMonth)
+	var feedback_count int64
+	err := row.Scan(&feedback_count)
+	return feedback_count, err
+}
+
 const createFeedback = `-- name: CreateFeedback :exec
 INSERT INTO feedback (type, content)
 VALUES ($1, $2)

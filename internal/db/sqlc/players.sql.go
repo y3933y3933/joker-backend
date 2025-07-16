@@ -244,6 +244,19 @@ func (q *Queries) GetGamePlayerStats(ctx context.Context, gameID int64) ([]GetGa
 	return items, nil
 }
 
+const getLivePlayerCount = `-- name: GetLivePlayerCount :one
+SELECT COUNT(*) AS live_player_count
+FROM players
+WHERE status = 'online'
+`
+
+func (q *Queries) GetLivePlayerCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getLivePlayerCount)
+	var live_player_count int64
+	err := row.Scan(&live_player_count)
+	return live_player_count, err
+}
+
 const getPlayerCountByGameCode = `-- name: GetPlayerCountByGameCode :one
 SELECT COUNT(*) FROM players
 WHERE game_id = (SELECT id FROM games WHERE code = $1)
