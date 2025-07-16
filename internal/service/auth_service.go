@@ -10,7 +10,7 @@ import (
 )
 
 type CustomClaims struct {
-	UserID   string `json:"user_id"`
+	UserID   int64  `json:"user_id"`
 	Username string `json:"username"`
 	// Role     string `json:"role"`
 	jwt.RegisteredClaims
@@ -66,16 +66,18 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (str
 func (s *AuthService) createToken(userID int64, username string) (string, error) {
 	now := time.Now()
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  userID,
-		"username": username,
-		// 標準 claims (RFC 7519)
-		"iss": "joker-admin",
-		"sub": userID,
-		"exp": now.Add(24 * time.Hour).Unix(),
-		"iat": now.Unix(),
-		"nbf": now.Unix(),
-	})
+	claims := CustomClaims{
+		UserID:   userID,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			// Subject:  userID),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 	tokenString, err := token.SignedString(s.jwtSecret)
 
 	if err != nil {
@@ -86,7 +88,8 @@ func (s *AuthService) createToken(userID int64, username string) (string, error)
 }
 
 func (s *AuthService) ParseToken(tokenString string) (*CustomClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return s.jwtSecret, nil
 	})
 

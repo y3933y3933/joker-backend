@@ -39,6 +39,7 @@ type Application struct {
 	AuthHandler       *api.AuthHandler
 	WSHandler         *ws.Handler
 	MiddlewareHandler *middleware.Middleware
+	UserHandler       *api.UserHandler
 }
 
 func NewApplication() (*Application, error) {
@@ -71,6 +72,7 @@ func NewApplication() (*Application, error) {
 	questionService := service.NewQuestionService(questionStore)
 	feedbackService := service.NewFeedbackService(feedbackStore)
 	authService := service.NewAuthService(userStore, []byte(cfg.JWT_SECRET))
+	userService := service.NewUserService(userStore)
 
 	// ws
 	hub := ws.NewHub()
@@ -83,6 +85,7 @@ func NewApplication() (*Application, error) {
 	feedbackHandler := api.NewFeedbackHandler(logger, feedbackService)
 	authHandler := api.NewAuthHandler(authService, logger)
 	middlewareHandler := middleware.NewMiddleware(gameService, authService)
+	userHandler := api.NewUserHandler(userService, logger)
 
 	app := &Application{
 		Config: cfg,
@@ -98,6 +101,7 @@ func NewApplication() (*Application, error) {
 		WSHandler:         wsHandler,
 		FeedbackHandler:   feedbackHandler,
 		MiddlewareHandler: middlewareHandler,
+		UserHandler:       userHandler,
 	}
 	return app, nil
 }

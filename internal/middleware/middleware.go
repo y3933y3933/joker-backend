@@ -103,7 +103,6 @@ func (m *Middleware) Authenticate() gin.HandlerFunc {
 
 func extractTokenFromHeaders(headers http.Header) string {
 	authHeader := headers.Get("Authorization")
-
 	if authHeader == "" {
 		return ""
 	}
@@ -113,4 +112,15 @@ func extractTokenFromHeaders(headers http.Header) string {
 		return ""
 	}
 	return headerParts[1]
+}
+
+func (m *Middleware) RequireUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		_, exists := c.Get("user_id")
+		if !exists {
+			httpx.UnAuthorized(c, errx.ErrLoginRequired)
+			return
+		}
+		c.Next()
+	}
 }

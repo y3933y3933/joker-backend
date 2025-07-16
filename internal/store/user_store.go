@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/jackc/pgerrcode"
@@ -57,6 +58,7 @@ func NewPostgresUserStore(queries *sqlc.Queries) *PostgresUserStore {
 type UserStore interface {
 	Create(ctx context.Context, user *User) error
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
+	GetUserByID(ctx context.Context, userID int64) (*User, error)
 }
 
 func (pg *PostgresUserStore) Create(ctx context.Context, user *User) error {
@@ -92,5 +94,22 @@ func (pg *PostgresUserStore) GetUserByUsername(ctx context.Context, username str
 		ID:       row.ID,
 		Username: username,
 		Password: password,
+	}, nil
+}
+
+func (pg *PostgresUserStore) GetUserByID(ctx context.Context, userID int64) (*User, error) {
+	row, err := pg.queries.GetUserByID(ctx, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, errx.ErrUserNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &User{
+		ID:       row.ID,
+		Username: row.Username,
 	}, nil
 }

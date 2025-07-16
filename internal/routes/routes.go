@@ -62,6 +62,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	{
 		admin.POST("/users", app.AuthHandler.HandleRegisterUser)
 		admin.POST("/login", app.AuthHandler.HandleLogin)
+
+		admin.GET("/users", app.MiddlewareHandler.Authenticate(), app.MiddlewareHandler.RequireUser(), app.UserHandler.HandlerGetUserInfo)
 	}
 
 	return router

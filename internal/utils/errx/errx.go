@@ -16,11 +16,11 @@ var (
 )
 
 var (
-	ErrDuplicateUsername = errors.New("username already taken")
-
-	ErrInvalidCredentials = errors.New("invalid username or password")
-
+	ErrDuplicateUsername          = errors.New("username already taken")
+	ErrInvalidCredentials         = errors.New("invalid username or password")
 	ErrInvalidAuthorizationHeader = errors.New("invalid authorization header")
 	ErrInvalidToken               = errors.New("invalid token")
 	ErrTokenExpired               = errors.New("token expired")
+	ErrUserNotFound               = errors.New("user not found")
+	ErrLoginRequired              = errors.New("login required")
 )
