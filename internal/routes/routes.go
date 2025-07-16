@@ -3,7 +3,6 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/y3933y3933/joker/internal/app"
-	"github.com/y3933y3933/joker/internal/middleware"
 )
 
 func SetupRoutes(app *app.Application) *gin.Engine {
@@ -16,7 +15,7 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 	// 建立遊戲
 	games.POST("/", app.GameHandler.HandleCreateGame)
 
-	codes := games.Group("/:code", middleware.ValidateGameExists(app.GameStore))
+	codes := games.Group("/:code", app.MiddlewareHandler.ValidateGameExists())
 	{
 		// 加入遊戲
 		codes.POST("/join", app.PlayerHandler.HandleJoinGame)
@@ -34,9 +33,9 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		codes.GET("/summary", app.GameHandler.GetGameSummary)
 
 		// 離開遊戲（含 Host 轉移）
-		codes.POST("/players/leave", middleware.WithPlayerID(), app.PlayerHandler.HandleLeaveGame)
+		codes.POST("/players/leave", app.MiddlewareHandler.WithPlayerID(), app.PlayerHandler.HandleLeaveGame)
 
-		rounds := codes.Group("/rounds", middleware.WithPlayerID())
+		rounds := codes.Group("/rounds", app.MiddlewareHandler.WithPlayerID())
 		{
 			// 更新題目
 			rounds.POST("/:id/question", app.RoundHandler.HandleSubmitQuestion)

@@ -10,15 +10,28 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/y3933y3933/joker/internal/service"
-	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/errx"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
 )
 
+type Middleware struct {
+	gameService *service.GameService
+	authService *service.AuthService
+}
+
+func NewMiddleware(gameService *service.GameService,
+	authService *service.AuthService) *Middleware {
+	return &Middleware{
+		gameService: gameService,
+		authService: authService,
+	}
+}
+
+type contextKey string
+
 var codePattern = regexp.MustCompile(`^[A-Za-z0-9]{6}$`)
 
-// TODO: replace gameStore
-func ValidateGameExists(gameStore store.GameStore) gin.HandlerFunc {
+func (m *Middleware) ValidateGameExists() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		if code == "" || !codePattern.MatchString(code) {
@@ -26,18 +39,19 @@ func ValidateGameExists(gameStore store.GameStore) gin.HandlerFunc {
 			return
 		}
 
-		game, err := gameStore.GetGameByCode(c.Request.Context(), code)
+		game, err := m.gameService.GetGameByCode(c.Request.Context(), code)
+
 		if err != nil {
 			httpx.NotFoundResponse(c, errors.New("game not found"))
 			return
 		}
 
-		c.Set("game", game) // 讓後續 handler 可用
+		c.Set("game", game)
 		c.Next()
 	}
 }
 
-func WithPlayerID() gin.HandlerFunc {
+func (m *Middleware) WithPlayerID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		playerIDStr := c.GetHeader("X-Player-ID")
 		if playerIDStr == "" {
@@ -54,15 +68,7 @@ func WithPlayerID() gin.HandlerFunc {
 	}
 }
 
-type AuthMiddleware struct {
-	AuthService service.AuthService
-}
-
-type contextKey string
-
-const UserContextKey = contextKey("user")
-
-func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
+func (m *Middleware) Authenticate() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		c.Header("Vary", "Authorization")
@@ -73,7 +79,7 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := m.AuthService.ParseToken(tokenString)
+		claims, err := m.authService.ParseToken(tokenString)
 		if err != nil {
 			httpx.UnAuthorized(c, err)
 			return
@@ -89,7 +95,7 @@ func (m *AuthMiddleware) Authenticate() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("userID", claims.UserID)
+		c.Set("user_id", claims.UserID)
 
 		c.Next()
 	}

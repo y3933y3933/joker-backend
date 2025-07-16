@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/y3933y3933/joker/internal/api"
 	"github.com/y3933y3933/joker/internal/db/sqlc"
+	"github.com/y3933y3933/joker/internal/middleware"
 	"github.com/y3933y3933/joker/internal/service"
 	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/ws"
@@ -28,16 +29,16 @@ type db struct {
 }
 
 type Application struct {
-	Config          config
-	Logger          *slog.Logger
-	DB              *db
-	GameHandler     *api.GameHandler
-	GameStore       *store.PostgresGameStore
-	PlayerHandler   *api.PlayerHandler
-	RoundHandler    *api.RoundHandler
-	FeedbackHandler *api.FeedbackHandler
-	AuthHandler     *api.AuthHandler
-	WSHandler       *ws.Handler
+	Config            config
+	Logger            *slog.Logger
+	DB                *db
+	GameHandler       *api.GameHandler
+	PlayerHandler     *api.PlayerHandler
+	RoundHandler      *api.RoundHandler
+	FeedbackHandler   *api.FeedbackHandler
+	AuthHandler       *api.AuthHandler
+	WSHandler         *ws.Handler
+	MiddlewareHandler *middleware.Middleware
 }
 
 func NewApplication() (*Application, error) {
@@ -81,6 +82,7 @@ func NewApplication() (*Application, error) {
 	wsHandler := ws.NewHandler(hub, logger, playerService, gameService, roundService)
 	feedbackHandler := api.NewFeedbackHandler(logger, feedbackService)
 	authHandler := api.NewAuthHandler(authService, logger)
+	middlewareHandler := middleware.NewMiddleware(gameService, authService)
 
 	app := &Application{
 		Config: cfg,
@@ -89,13 +91,13 @@ func NewApplication() (*Application, error) {
 			ConnPool: pgDB,
 			Queries:  queries,
 		},
-		GameHandler:     gameHandler,
-		GameStore:       gameStore,
-		PlayerHandler:   playerHandler,
-		RoundHandler:    roundHandler,
-		AuthHandler:     authHandler,
-		WSHandler:       wsHandler,
-		FeedbackHandler: feedbackHandler,
+		GameHandler:       gameHandler,
+		PlayerHandler:     playerHandler,
+		RoundHandler:      roundHandler,
+		AuthHandler:       authHandler,
+		WSHandler:         wsHandler,
+		FeedbackHandler:   feedbackHandler,
+		MiddlewareHandler: middlewareHandler,
 	}
 	return app, nil
 }

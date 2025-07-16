@@ -85,22 +85,6 @@ func (s *AuthService) createToken(userID int64, username string) (string, error)
 	return tokenString, nil
 }
 
-// func (s *AuthService) verifyToken(tokenString string) error {
-// 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-// 		return s.jwtSecret, nil
-// 	})
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	if !token.Valid {
-// 		return errors.New("invalid token")
-// 	}
-
-// 	return nil
-
-// }
-
 func (s *AuthService) ParseToken(tokenString string) (*CustomClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return s.jwtSecret, nil
