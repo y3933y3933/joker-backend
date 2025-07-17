@@ -80,3 +80,28 @@ func (s *QuestionService) ValidateParams(params QuestionQueryParams) error {
 
 	return nil
 }
+
+func (s *QuestionService) DeleteQuestion(ctx context.Context, id int64) error {
+	return s.questionStore.Delete(ctx, id)
+}
+
+func (s *QuestionService) CreateQuestion(ctx context.Context, content, level string) (*store.Question, error) {
+	return s.questionStore.Create(ctx, content, level)
+}
+
+func (s *QuestionService) UpdateQuestion(ctx context.Context, id int64, content, level *string) (*store.Question, error) {
+	question, err := s.questionStore.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if level != nil {
+		question.Level = *level
+	}
+	if content != nil {
+		question.Content = *content
+	}
+
+	return s.questionStore.Update(ctx, question.ID, question.Content, question.Level)
+
+}

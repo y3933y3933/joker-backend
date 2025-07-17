@@ -36,6 +36,10 @@ func NewPostgresQuestionStore(queries *sqlc.Queries) *PostgresQuestionStore {
 type QuestionStore interface {
 	ListRandomQuestions(ctx context.Context, limit int32) ([]*Question, error)
 	ListQuestions(ctx context.Context, content, level string, filters Filters) (*PaginatedQuestion, error)
+	Create(ctx context.Context, content, level string) (*Question, error)
+	Delete(ctx context.Context, id int64) error
+	Update(ctx context.Context, id int64, content, level string) (*Question, error)
+	Get(ctx context.Context, id int64) (*Question, error)
 }
 
 func (pg *PostgresQuestionStore) ListRandomQuestions(ctx context.Context, limit int32) ([]*Question, error) {
@@ -88,4 +92,56 @@ func (pg *PostgresQuestionStore) ListQuestions(ctx context.Context, content, lev
 		Metadata:  CalculateMetadata(totalCount, filters.Page, filters.PageSize),
 	}, nil
 
+}
+
+func (pg *PostgresQuestionStore) Create(ctx context.Context, content, level string) (*Question, error) {
+	row, err := pg.queries.CreateQuestion(ctx, sqlc.CreateQuestionParams{
+		Level:   level,
+		Content: content,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Question{
+		ID:        row.ID,
+		Content:   row.Content,
+		Level:     row.Level,
+		CreatedAt: row.CreatedAt.Time,
+	}, nil
+}
+
+func (pg *PostgresQuestionStore) Delete(ctx context.Context, id int64) error {
+	return pg.queries.DeleteQuestion(ctx, id)
+}
+
+func (pg *PostgresQuestionStore) Update(ctx context.Context, id int64, content, level string) (*Question, error) {
+	row, err := pg.queries.UpdateQuestion(ctx, sqlc.UpdateQuestionParams{
+		ID:      id,
+		Level:   level,
+		Content: content,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Question{
+		ID:      row.ID,
+		Content: row.Content,
+		Level:   row.Level,
+	}, nil
+}
+
+func (pg *PostgresQuestionStore) Get(ctx context.Context, id int64) (*Question, error) {
+	row, err := pg.queries.GetQuestionByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Question{
+		ID:      row.ID,
+		Level:   row.Level,
+		Content: row.Content,
+	}, nil
 }

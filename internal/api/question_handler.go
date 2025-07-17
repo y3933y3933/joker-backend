@@ -26,7 +26,7 @@ type QuestionResponse struct {
 	Question store.Question
 }
 
-func (h *QuestionHandler) GetPaginatedQuestions(c *gin.Context) {
+func (h *QuestionHandler) HandleGetPaginatedQuestions(c *gin.Context) {
 	params := h.parseQueryParams(c)
 
 	if err := h.questionService.ValidateParams(params); err != nil {
@@ -60,4 +60,68 @@ func (h *QuestionHandler) parseQueryParams(c *gin.Context) service.QuestionQuery
 	}
 
 	return params
+}
+
+type createQuestionRequest struct {
+	Level   string `json:"level" binding:"required,oneof=normal spicy"`
+	Content string `json:"content" binding:"required"`
+}
+
+func (h *QuestionHandler) HandleCreateQuestion(c *gin.Context) {
+	var req createQuestionRequest
+	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	q, err := h.questionService.CreateQuestion(c.Request.Context(), req.Content, req.Level)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, q)
+}
+
+func (h *QuestionHandler) HandleDeleteQuestion(c *gin.Context) {
+	id, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	err = h.questionService.DeleteQuestion(c.Request.Context(), id)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, nil)
+}
+
+type updateQuestionRequest struct {
+	Level   *string `json:"level" binding:"oneof=normal spicy" `
+	Content *string `json:"content"`
+}
+
+func (h *QuestionHandler) HandleUpdateQuestion(c *gin.Context) {
+	id, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	var req updateQuestionRequest
+	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	q, err := h.questionService.UpdateQuestion(c.Request.Context(), id, req.Content, req.Level)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, q)
 }

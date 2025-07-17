@@ -67,7 +67,11 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 
 		admin.GET("/dashboard", app.MiddlewareHandler.Authenticate(), app.AdminHandler.HandleDashboardData)
 
-		admin.GET("/questions", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.GetPaginatedQuestions)
+		// questions
+		admin.GET("/questions", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleGetPaginatedQuestions)
+		admin.POST("/questions", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleCreateQuestion)
+		admin.PATCH("/questions/:id", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleUpdateQuestion)
+		admin.DELETE("/questions/:id", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleDeleteQuestion)
 	}
 
 	return router
