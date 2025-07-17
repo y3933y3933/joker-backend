@@ -11,9 +11,9 @@ import (
 type QuestionQueryParams struct {
 	Keyword  string `json:"keyword"`
 	Level    string `json:"level"`
-	SortBy   string `json:"sortBy"`
+	SortBy   string `json:"sort_by"`
 	Page     int    `json:"page"`
-	PageSize int    `json:"pageSize"`
+	PageSize int    `json:"page_size"`
 }
 
 type QuestionService struct {

@@ -47,13 +47,13 @@ func (h *QuestionHandler) parseQueryParams(c *gin.Context) service.QuestionQuery
 	params := service.QuestionQueryParams{
 		Keyword:  c.Query("keyword"),
 		Level:    c.Query("level"),
-		SortBy:   c.Query("sortBy"),
+		SortBy:   c.Query("sort_by"),
 		Page:     1,
 		PageSize: 10,
 	}
 
 	params.Page = param.ReadIntQuery(c, "page", 1)
-	params.PageSize = param.ReadIntQuery(c, "pageSize", 10)
+	params.PageSize = param.ReadIntQuery(c, "page_size", 10)
 
 	if params.SortBy == "" {
 		params.SortBy = "created_at_desc"
