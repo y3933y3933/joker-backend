@@ -41,6 +41,7 @@ type Application struct {
 	MiddlewareHandler *middleware.Middleware
 	UserHandler       *api.UserHandler
 	AdminHandler      *api.AdminHandler
+	QuestionHandler   *api.QuestionHandler
 }
 
 func NewApplication() (*Application, error) {
@@ -89,6 +90,7 @@ func NewApplication() (*Application, error) {
 	middlewareHandler := middleware.NewMiddleware(gameService, authService)
 	userHandler := api.NewUserHandler(userService, logger)
 	adminHandler := api.NewAdminHandler(logger, adminService)
+	questionHandler := api.NewQuestionHandler(logger, questionService)
 
 	app := &Application{
 		Config: cfg,
@@ -106,6 +108,7 @@ func NewApplication() (*Application, error) {
 		MiddlewareHandler: middlewareHandler,
 		AdminHandler:      adminHandler,
 		UserHandler:       userHandler,
+		QuestionHandler:   questionHandler,
 	}
 	return app, nil
 }

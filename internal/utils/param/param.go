@@ -18,3 +18,18 @@ func ParseIntParam(c *gin.Context, key string) (int64, error) {
 	}
 	return id, nil
 }
+
+func ReadIntQuery(c *gin.Context, key string, defaultValue int) int {
+	s := c.Query(key)
+
+	if s == "" {
+		return defaultValue
+	}
+
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return defaultValue
+	}
+
+	return i
+}
