@@ -29,7 +29,7 @@ type QuestionResponse struct {
 func (h *QuestionHandler) HandleGetPaginatedQuestions(c *gin.Context) {
 	params := h.parseQueryParams(c)
 
-	if err := h.questionService.ValidateParams(params); err != nil {
+	if err := h.questionService.ValidateQuestionParams(params); err != nil {
 		httpx.BadRequestResponse(c, err)
 		return
 	}

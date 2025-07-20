@@ -7,6 +7,7 @@ import (
 	"github.com/y3933y3933/joker/internal/service"
 	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
+	"github.com/y3933y3933/joker/internal/utils/param"
 )
 
 type FeedbackHandler struct {
@@ -44,4 +45,83 @@ func (h *FeedbackHandler) HandleCreateFeedback(c *gin.Context) {
 	}
 
 	httpx.SuccessResponse(c, nil)
+}
+
+func (h *FeedbackHandler) HandlerListFeedback(c *gin.Context) {
+	params := h.parseQueryParams(c)
+
+	if err := h.feedbackService.ValidateFeedbackParams(params); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	result, err := h.feedbackService.ListFeedback(c.Request.Context(), params)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, result)
+
+}
+
+func (h *FeedbackHandler) parseQueryParams(c *gin.Context) service.FeedbackQueryParams {
+	params := service.FeedbackQueryParams{
+		Type:       c.Query("type"),
+		IsReviewed: false,
+		Page:       1,
+		PageSize:   10,
+	}
+
+	params.Page = param.ReadIntQuery(c, "page", 1)
+	params.PageSize = param.ReadIntQuery(c, "page_size", 10)
+
+	isReviewedStr := c.Query("isReviewed")
+	if isReviewedStr == "true" {
+		params.IsReviewed = true
+	}
+
+	return params
+}
+
+func (h *FeedbackHandler) HandleGetFeedbackByID(c *gin.Context) {
+	id, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	result, err := h.feedbackService.GetFeedbackByID(c.Request.Context(), id)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+	httpx.SuccessResponse(c, result)
+
+}
+
+func (h *FeedbackHandler) HandleUpdateFeedbackReviewStatus(c *gin.Context) {
+	var req struct {
+		IsReviewed bool `json:"isReviewed" binding:"required"`
+	}
+
+	id, err := param.ParseIntParam(c, "id")
+	if err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	err = h.feedbackService.UpdateFeedbackReviewStatus(c.Request.Context(), id, req.IsReviewed)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, nil)
+
 }

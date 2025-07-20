@@ -7,6 +7,8 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countRecentFeedbacksOneMonth = `-- name: CountRecentFeedbacksOneMonth :one
@@ -34,5 +36,104 @@ type CreateFeedbackParams struct {
 
 func (q *Queries) CreateFeedback(ctx context.Context, arg CreateFeedbackParams) error {
 	_, err := q.db.Exec(ctx, createFeedback, arg.Type, arg.Content)
+	return err
+}
+
+const getFeedbackByID = `-- name: GetFeedbackByID :one
+SELECT id, type, is_reviewed,content,created_at 
+FROM feedback
+WHERE id = $1
+`
+
+type GetFeedbackByIDRow struct {
+	ID         int64
+	Type       string
+	IsReviewed bool
+	Content    string
+	CreatedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) GetFeedbackByID(ctx context.Context, id int64) (GetFeedbackByIDRow, error) {
+	row := q.db.QueryRow(ctx, getFeedbackByID, id)
+	var i GetFeedbackByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.IsReviewed,
+		&i.Content,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listFeedback = `-- name: ListFeedback :many
+SELECT COUNT(*) OVER(), id, type, is_reviewed, content , created_at 
+FROM feedback 
+WHERE (type = $1 OR $1 = '') AND is_reviewed = $2
+ORDER BY created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type ListFeedbackParams struct {
+	Type       string
+	IsReviewed bool
+	Limit      int32
+	Offset     int32
+}
+
+type ListFeedbackRow struct {
+	Count      int64
+	ID         int64
+	Type       string
+	IsReviewed bool
+	Content    string
+	CreatedAt  pgtype.Timestamptz
+}
+
+func (q *Queries) ListFeedback(ctx context.Context, arg ListFeedbackParams) ([]ListFeedbackRow, error) {
+	rows, err := q.db.Query(ctx, listFeedback,
+		arg.Type,
+		arg.IsReviewed,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListFeedbackRow
+	for rows.Next() {
+		var i ListFeedbackRow
+		if err := rows.Scan(
+			&i.Count,
+			&i.ID,
+			&i.Type,
+			&i.IsReviewed,
+			&i.Content,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateFeedbackReviewStatus = `-- name: UpdateFeedbackReviewStatus :exec
+UPDATE feedback 
+SET is_reviewed = $2
+WHERE id = $1
+`
+
+type UpdateFeedbackReviewStatusParams struct {
+	ID         int64
+	IsReviewed bool
+}
+
+func (q *Queries) UpdateFeedbackReviewStatus(ctx context.Context, arg UpdateFeedbackReviewStatusParams) error {
+	_, err := q.db.Exec(ctx, updateFeedbackReviewStatus, arg.ID, arg.IsReviewed)
 	return err
 }

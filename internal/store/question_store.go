@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/y3933y3933/joker/internal/db/sqlc"
@@ -67,8 +66,6 @@ func (pg *PostgresQuestionStore) ListQuestions(ctx context.Context, content, lev
 		Limit:          int32(filters.limit()),
 		Offset:         int32(filters.offset()),
 	}
-
-	fmt.Printf("Args: %+v\n", args)
 
 	rows, err := pg.queries.ListQuestions(ctx, args)
 	if err != nil {

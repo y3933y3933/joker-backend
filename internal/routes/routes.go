@@ -72,6 +72,12 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		admin.POST("/questions", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleCreateQuestion)
 		admin.PATCH("/questions/:id", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleUpdateQuestion)
 		admin.DELETE("/questions/:id", app.MiddlewareHandler.Authenticate(), app.QuestionHandler.HandleDeleteQuestion)
+
+		// feedback
+		admin.GET("/feedback", app.MiddlewareHandler.Authenticate(), app.FeedbackHandler.HandlerListFeedback)
+		admin.GET("/feedback/:id", app.MiddlewareHandler.Authenticate(), app.FeedbackHandler.HandleGetFeedbackByID)
+		admin.PATCH("/feedback/:id/review-status", app.MiddlewareHandler.Authenticate(), app.FeedbackHandler.HandleUpdateFeedbackReviewStatus)
+
 	}
 
 	return router

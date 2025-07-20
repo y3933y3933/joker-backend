@@ -46,7 +46,7 @@ func (s *QuestionService) ListQuestions(ctx context.Context, query QuestionQuery
 	return result, nil
 }
 
-func (s *QuestionService) ValidateParams(params QuestionQueryParams) error {
+func (s *QuestionService) ValidateQuestionParams(params QuestionQueryParams) error {
 	// 驗證 level
 	if params.Level != "" {
 		if params.Level != "normal" && params.Level != "spicy" {
