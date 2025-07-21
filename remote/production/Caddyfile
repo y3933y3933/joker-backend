@@ -2,16 +2,15 @@
 	email y3933y3933@gmail.com
 }
 
+joker.jienian.tw {
+    root * /srv/www/frontend
 
-joker.jienian.tw { 
-	root * /srv/www/frontend
-	file_server
+    handle /api/* {
+        reverse_proxy localhost:4000
+    }
 
-	handle /api/* {
-		reverse_proxy localhost:4000
-	}
-
-	try_files {path} /
-	
+    handle {
+        try_files {path} /index.html
+        file_server
+    }
 }
-
