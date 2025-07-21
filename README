@@ -1,0 +1,48 @@
+# Joker API
+![joker](./joker.jpeg)
+## Description
+The backend API for Joker, an online social game built with Go. Powered by Gin, sqlc, and WebSocket, this API handles real-time gameplay, player interactions, and game state management. Designed for scalability and seamless multiplayer experiences.
+
+
+
+## "Why?" 
+I've always been fascinated by social games after playing offline party games like "鬼牌" (a German social deduction game) with friends. These games create amazing moments of connection and laughter, but I noticed a common problem: we'd often run out of interesting questions or prompts, which would kill the momentum.
+
+So I built this backend system that provides a flexible, extensible question database with real-time capabilities. 
+
+
+
+## 🚀 Quick Start
+
+Navigate to [joker.jienian.tw](https://joker.jienian.tw) and start your social game!
+
+Create rooms, add questions, and play with friends instantly.
+
+
+## Contributing
+
+## 🤝 Contributing
+
+### Clone the repo
+
+```bash
+git clone https://github.com/y3933y3933/joker-backend
+cd joker-backend
+```
+
+### Build the project
+
+```bash
+make build
+```
+
+### Run the project
+
+```bash
+make run
+```
+
+
+### Submit a pull request
+
+If you'd like to contribute, please fork the repository and open a pull request to the `main` branch.
