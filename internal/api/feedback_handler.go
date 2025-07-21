@@ -67,19 +67,14 @@ func (h *FeedbackHandler) HandlerListFeedback(c *gin.Context) {
 
 func (h *FeedbackHandler) parseQueryParams(c *gin.Context) service.FeedbackQueryParams {
 	params := service.FeedbackQueryParams{
-		Type:       c.Query("type"),
-		IsReviewed: false,
-		Page:       1,
-		PageSize:   10,
+		Type:         c.Query("type"),
+		ReviewStatus: c.Query("reviewStatus"),
+		Page:         1,
+		PageSize:     10,
 	}
 
 	params.Page = param.ReadIntQuery(c, "page", 1)
 	params.PageSize = param.ReadIntQuery(c, "page_size", 10)
-
-	isReviewedStr := c.Query("isReviewed")
-	if isReviewedStr == "true" {
-		params.IsReviewed = true
-	}
 
 	return params
 }
@@ -102,7 +97,7 @@ func (h *FeedbackHandler) HandleGetFeedbackByID(c *gin.Context) {
 
 func (h *FeedbackHandler) HandleUpdateFeedbackReviewStatus(c *gin.Context) {
 	var req struct {
-		IsReviewed bool `json:"isReviewed" binding:"required"`
+		ReviewStatus string `json:"reviewStatus" binding:"required"`
 	}
 
 	id, err := param.ParseIntParam(c, "id")
@@ -112,11 +107,12 @@ func (h *FeedbackHandler) HandleUpdateFeedbackReviewStatus(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindBodyWithJSON(&req); err != nil {
+		h.logger.Error("Failed to bind request body", slog.Any("error", err))
 		httpx.BadRequestResponse(c, err)
 		return
 	}
 
-	err = h.feedbackService.UpdateFeedbackReviewStatus(c.Request.Context(), id, req.IsReviewed)
+	err = h.feedbackService.UpdateFeedbackReviewStatus(c.Request.Context(), id, req.ReviewStatus)
 	if err != nil {
 		httpx.ServerErrorResponse(c, h.logger, err)
 		return

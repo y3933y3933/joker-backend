@@ -22,10 +22,10 @@ func (s *FeedbackService) CreateFeedback(ctx context.Context, feedback *store.Fe
 }
 
 type FeedbackQueryParams struct {
-	Type       string `json:"type"`
-	IsReviewed bool   `json:"isReviewed"`
-	Page       int    `json:"page"`
-	PageSize   int    `json:"page_size"`
+	Type         string `json:"type"`
+	ReviewStatus string `json:"reviewStatus"`
+	Page         int    `json:"page"`
+	PageSize     int    `json:"page_size"`
 }
 
 func (s *FeedbackService) ListFeedback(ctx context.Context, query FeedbackQueryParams) (*store.PaginatedFeedback, error) {
@@ -34,7 +34,7 @@ func (s *FeedbackService) ListFeedback(ctx context.Context, query FeedbackQueryP
 		PageSize: query.PageSize,
 	}
 
-	result, err := s.feedbackStore.List(ctx, query.Type, query.IsReviewed, filters)
+	result, err := s.feedbackStore.List(ctx, query.Type, query.ReviewStatus, filters)
 
 	if err != nil {
 		return nil, err
@@ -47,8 +47,8 @@ func (s *FeedbackService) GetFeedbackByID(ctx context.Context, id int64) (*store
 	return s.feedbackStore.GetByID(ctx, id)
 }
 
-func (s *FeedbackService) UpdateFeedbackReviewStatus(ctx context.Context, id int64, isReviewed bool) error {
-	return s.feedbackStore.UpdateReviewStatus(ctx, id, isReviewed)
+func (s *FeedbackService) UpdateFeedbackReviewStatus(ctx context.Context, id int64, reviewStatus string) error {
+	return s.feedbackStore.UpdateReviewStatus(ctx, id, reviewStatus)
 }
 
 func (s *FeedbackService) ValidateFeedbackParams(params FeedbackQueryParams) error {

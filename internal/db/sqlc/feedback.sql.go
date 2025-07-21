@@ -40,17 +40,17 @@ func (q *Queries) CreateFeedback(ctx context.Context, arg CreateFeedbackParams) 
 }
 
 const getFeedbackByID = `-- name: GetFeedbackByID :one
-SELECT id, type, is_reviewed,content,created_at 
+SELECT id, type, review_status ,content,created_at 
 FROM feedback
 WHERE id = $1
 `
 
 type GetFeedbackByIDRow struct {
-	ID         int64
-	Type       string
-	IsReviewed bool
-	Content    string
-	CreatedAt  pgtype.Timestamptz
+	ID           int64
+	Type         string
+	ReviewStatus string
+	Content      string
+	CreatedAt    pgtype.Timestamptz
 }
 
 func (q *Queries) GetFeedbackByID(ctx context.Context, id int64) (GetFeedbackByIDRow, error) {
@@ -59,7 +59,7 @@ func (q *Queries) GetFeedbackByID(ctx context.Context, id int64) (GetFeedbackByI
 	err := row.Scan(
 		&i.ID,
 		&i.Type,
-		&i.IsReviewed,
+		&i.ReviewStatus,
 		&i.Content,
 		&i.CreatedAt,
 	)
@@ -67,33 +67,33 @@ func (q *Queries) GetFeedbackByID(ctx context.Context, id int64) (GetFeedbackByI
 }
 
 const listFeedback = `-- name: ListFeedback :many
-SELECT COUNT(*) OVER(), id, type, is_reviewed, content , created_at 
+SELECT COUNT(*) OVER(), id, type, review_status , content, created_at 
 FROM feedback 
-WHERE (type = $1 OR $1 = '') AND is_reviewed = $2
+WHERE (type = $1 OR $1 ='') AND (review_status = $2 OR $2 = '')
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $4
 `
 
 type ListFeedbackParams struct {
-	Type       string
-	IsReviewed bool
-	Limit      int32
-	Offset     int32
+	Type         string
+	ReviewStatus string
+	Limit        int32
+	Offset       int32
 }
 
 type ListFeedbackRow struct {
-	Count      int64
-	ID         int64
-	Type       string
-	IsReviewed bool
-	Content    string
-	CreatedAt  pgtype.Timestamptz
+	Count        int64
+	ID           int64
+	Type         string
+	ReviewStatus string
+	Content      string
+	CreatedAt    pgtype.Timestamptz
 }
 
 func (q *Queries) ListFeedback(ctx context.Context, arg ListFeedbackParams) ([]ListFeedbackRow, error) {
 	rows, err := q.db.Query(ctx, listFeedback,
 		arg.Type,
-		arg.IsReviewed,
+		arg.ReviewStatus,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -108,7 +108,7 @@ func (q *Queries) ListFeedback(ctx context.Context, arg ListFeedbackParams) ([]L
 			&i.Count,
 			&i.ID,
 			&i.Type,
-			&i.IsReviewed,
+			&i.ReviewStatus,
 			&i.Content,
 			&i.CreatedAt,
 		); err != nil {
@@ -124,16 +124,16 @@ func (q *Queries) ListFeedback(ctx context.Context, arg ListFeedbackParams) ([]L
 
 const updateFeedbackReviewStatus = `-- name: UpdateFeedbackReviewStatus :exec
 UPDATE feedback 
-SET is_reviewed = $2
+SET review_status = $2
 WHERE id = $1
 `
 
 type UpdateFeedbackReviewStatusParams struct {
-	ID         int64
-	IsReviewed bool
+	ID           int64
+	ReviewStatus string
 }
 
 func (q *Queries) UpdateFeedbackReviewStatus(ctx context.Context, arg UpdateFeedbackReviewStatusParams) error {
-	_, err := q.db.Exec(ctx, updateFeedbackReviewStatus, arg.ID, arg.IsReviewed)
+	_, err := q.db.Exec(ctx, updateFeedbackReviewStatus, arg.ID, arg.ReviewStatus)
 	return err
 }

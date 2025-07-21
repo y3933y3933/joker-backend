@@ -2,18 +2,17 @@ package store
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/y3933y3933/joker/internal/db/sqlc"
 )
 
 type Feedback struct {
-	ID         int64     `json:"id"`
-	Type       string    `json:"type"`
-	Content    string    `json:"content"`
-	CreatedAt  time.Time `json:"createdAt"`
-	IsReviewed bool      `json:"isReviewed"`
+	ID           int64     `json:"id"`
+	Type         string    `json:"type"`
+	Content      string    `json:"content"`
+	CreatedAt    time.Time `json:"createdAt"`
+	ReviewStatus string    `json:"reviewStatus"`
 }
 
 type PaginatedFeedback struct {
@@ -33,8 +32,8 @@ type FeedbackStore interface {
 	Create(context.Context, *Feedback) error
 	CountRecentFeedbacksOneMonth(context.Context) (int64, error)
 	GetByID(ctx context.Context, id int64) (*Feedback, error)
-	List(ctx context.Context, feedbackType string, isReviewed bool, filters Filters) (*PaginatedFeedback, error)
-	UpdateReviewStatus(ctx context.Context, id int64, isReviewed bool) error
+	List(ctx context.Context, feedbackType string, reviewStatus string, filters Filters) (*PaginatedFeedback, error)
+	UpdateReviewStatus(ctx context.Context, id int64, reviewStatus string) error
 }
 
 func (pg *PostgresFeedbackStore) Create(ctx context.Context, feedback *Feedback) error {
@@ -55,23 +54,22 @@ func (pg *PostgresFeedbackStore) GetByID(ctx context.Context, id int64) (*Feedba
 	}
 
 	return &Feedback{
-		ID:         row.ID,
-		Type:       row.Type,
-		Content:    row.Content,
-		CreatedAt:  row.CreatedAt.Time,
-		IsReviewed: row.IsReviewed,
+		ID:           row.ID,
+		Type:         row.Type,
+		Content:      row.Content,
+		CreatedAt:    row.CreatedAt.Time,
+		ReviewStatus: row.ReviewStatus,
 	}, nil
 }
 
-func (pg *PostgresFeedbackStore) List(ctx context.Context, feedbackType string, isReviewed bool, filters Filters) (*PaginatedFeedback, error) {
-	args := sqlc.ListFeedbackParams{
-		Type:       feedbackType,
-		IsReviewed: isReviewed,
-		Limit:      int32(filters.limit()),
-		Offset:     int32(filters.offset()),
-	}
+func (pg *PostgresFeedbackStore) List(ctx context.Context, feedbackType string, reviewStatus string, filters Filters) (*PaginatedFeedback, error) {
 
-	fmt.Printf("%v\n", args)
+	args := sqlc.ListFeedbackParams{
+		Type:         feedbackType,
+		ReviewStatus: reviewStatus,
+		Limit:        int32(filters.limit()),
+		Offset:       int32(filters.offset()),
+	}
 
 	rows, err := pg.queries.ListFeedback(ctx, args)
 	if err != nil {
@@ -83,11 +81,11 @@ func (pg *PostgresFeedbackStore) List(ctx context.Context, feedbackType string, 
 
 	for i, f := range rows {
 		feedbackResponses[i] = Feedback{
-			ID:         f.ID,
-			Type:       f.Type,
-			Content:    f.Content,
-			CreatedAt:  f.CreatedAt.Time,
-			IsReviewed: f.IsReviewed,
+			ID:           f.ID,
+			Type:         f.Type,
+			Content:      f.Content,
+			CreatedAt:    f.CreatedAt.Time,
+			ReviewStatus: f.ReviewStatus,
 		}
 		totalCount = int(f.Count)
 	}
@@ -98,10 +96,10 @@ func (pg *PostgresFeedbackStore) List(ctx context.Context, feedbackType string, 
 	}, nil
 }
 
-func (pg *PostgresFeedbackStore) UpdateReviewStatus(ctx context.Context, id int64, isReviewed bool) error {
+func (pg *PostgresFeedbackStore) UpdateReviewStatus(ctx context.Context, id int64, reviewStatus string) error {
 	args := sqlc.UpdateFeedbackReviewStatusParams{
-		ID:         id,
-		IsReviewed: isReviewed,
+		ID:           id,
+		ReviewStatus: reviewStatus,
 	}
 	return pg.queries.UpdateFeedbackReviewStatus(ctx, args)
 }

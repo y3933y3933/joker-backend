@@ -9,11 +9,11 @@ import (
 )
 
 type Feedback struct {
-	ID         int64
-	Type       string
-	Content    string
-	CreatedAt  pgtype.Timestamptz
-	IsReviewed bool
+	ID           int64
+	Type         string
+	Content      string
+	CreatedAt    pgtype.Timestamptz
+	ReviewStatus string
 }
 
 type Game struct {
