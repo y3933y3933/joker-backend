@@ -18,8 +18,19 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		// 開放所有來源，正式環境建議加驗證
-		return true
+		allowedOrigins := []string{
+			"https://joker.jienian.tw", // prod
+			"http://localhost:3000",    // dev
+		}
+
+		origin := r.Header.Get("Origin")
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				return true
+			}
+		}
+
+		return false
 	},
 }
 
