@@ -34,10 +34,11 @@ func (s *AuthService) CreateUser(ctx context.Context, username, password string)
 		return nil, err
 	}
 
-	err = s.userStore.Create(ctx, user)
+	id, err := s.userStore.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}
+	user.ID = id
 	return user, nil
 }
 

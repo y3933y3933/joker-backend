@@ -56,28 +56,29 @@ func NewPostgresUserStore(queries *sqlc.Queries) *PostgresUserStore {
 }
 
 type UserStore interface {
-	Create(ctx context.Context, user *User) error
+	Create(ctx context.Context, user *User) (int64, error)
 	GetUserByUsername(ctx context.Context, username string) (*User, error)
 	GetUserByID(ctx context.Context, userID int64) (*User, error)
 }
 
-func (pg *PostgresUserStore) Create(ctx context.Context, user *User) error {
+func (pg *PostgresUserStore) Create(ctx context.Context, user *User) (int64, error) {
 	args := sqlc.CreateUserParams{
 		Username:     user.Username,
 		PasswordHash: user.Password.hash,
 	}
-	_, err := pg.queries.CreateUser(ctx, args)
+
+	id, err := pg.queries.CreateUser(ctx, args)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return errx.ErrDuplicateUsername
+				return 0, errx.ErrDuplicateUsername
 			}
 		}
-		return err
+		return 0, err
 	}
-	return nil
+	return id, nil
 }
 
 func (pg *PostgresUserStore) GetUserByUsername(ctx context.Context, username string) (*User, error) {
