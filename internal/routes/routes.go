@@ -78,6 +78,8 @@ func SetupRoutes(app *app.Application) *gin.Engine {
 		admin.GET("/feedback/:id", app.MiddlewareHandler.Authenticate(), app.FeedbackHandler.HandleGetFeedbackByID)
 		admin.PATCH("/feedback/:id/review-status", app.MiddlewareHandler.Authenticate(), app.FeedbackHandler.HandleUpdateFeedbackReviewStatus)
 
+		admin.GET("/games", app.MiddlewareHandler.Authenticate(), app.GameHandler.HandleListGame)
+		admin.POST("/games/end", app.MiddlewareHandler.Authenticate(), app.GameHandler.HandleAdminEndGame)
 	}
 
 	return router

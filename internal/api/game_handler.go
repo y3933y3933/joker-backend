@@ -10,6 +10,7 @@ import (
 	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/errx"
 	"github.com/y3933y3933/joker/internal/utils/httpx"
+	"github.com/y3933y3933/joker/internal/utils/param"
 	"github.com/y3933y3933/joker/internal/ws"
 )
 
@@ -62,7 +63,7 @@ func (h *GameHandler) HandleEndGame(c *gin.Context) {
 	}
 	game := gameAny.(*store.Game)
 
-	err := h.gameService.EndGame(c.Request.Context(), game.Code, game.Status)
+	err := h.gameService.EndGame(c.Request.Context(), game.Code)
 	if err != nil {
 		if errors.Is(err, errx.ErrInvalidGameStatus) {
 			httpx.BadRequestResponse(c, err)
@@ -95,4 +96,56 @@ func (h *GameHandler) GetGameSummary(c *gin.Context) {
 		return
 	}
 	httpx.SuccessResponse(c, summary)
+}
+
+func (h *GameHandler) HandleListGame(c *gin.Context) {
+	params := h.parseQueryParams(c)
+
+	if err := h.gameService.ValidateGameParams(params); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+
+	result, err := h.gameService.ListGame(c.Request.Context(), params)
+	if err != nil {
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+
+	httpx.SuccessResponse(c, result)
+}
+
+func (h *GameHandler) parseQueryParams(c *gin.Context) service.GameQueryParams {
+	params := service.GameQueryParams{
+		Code:     c.Query("code"),
+		Status:   c.Query("status"),
+		Page:     1,
+		PageSize: 10,
+	}
+
+	params.Page = param.ReadIntQuery(c, "page", 1)
+	params.PageSize = param.ReadIntQuery(c, "page_size", 10)
+
+	return params
+}
+
+func (h *GameHandler) HandleAdminEndGame(c *gin.Context) {
+	var req struct {
+		Code string `json:"code" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httpx.BadRequestResponse(c, err)
+		return
+	}
+	err := h.gameService.EndGame(c.Request.Context(), req.Code)
+	if err != nil {
+		if errors.Is(err, errx.ErrInvalidGameStatus) {
+			httpx.BadRequestResponse(c, err)
+			return
+		}
+		httpx.ServerErrorResponse(c, h.logger, err)
+		return
+	}
+	httpx.SuccessResponse(c, gin.H{"message": "game ended"})
 }

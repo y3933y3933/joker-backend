@@ -140,7 +140,7 @@ func (h *Handler) ServeWS(c *gin.Context) {
 					if err != nil {
 						if errors.Is(err, errx.ErrNotEnoughPlayers) {
 							// 遊戲結束
-							_ = h.GameService.EndGame(ctx, game.Code, store.GameStatusPlaying)
+							_ = h.GameService.EndGame(ctx, game.Code)
 							msg, _ := NewWSMessage(MsgTypeGameEnded, gin.H{"gameCode": game.Code})
 							room.Broadcast(msg)
 							return

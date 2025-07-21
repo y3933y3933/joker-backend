@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/y3933y3933/joker/internal/store"
 	"github.com/y3933y3933/joker/internal/utils/codegen"
@@ -56,8 +58,13 @@ func (s *GameService) CreateGame(ctx context.Context) (*store.Game, error) {
 	return game, nil
 }
 
-func (s *GameService) EndGame(ctx context.Context, code string, status string) error {
-	if status == store.GameStatusEnded {
+func (s *GameService) EndGame(ctx context.Context, code string) error {
+	game, err := s.gameStore.GetGameByCode(ctx, code)
+	if err != nil {
+		return err
+	}
+
+	if game.Status == store.GameStatusEnded {
 		return errx.ErrInvalidGameStatus
 	}
 
@@ -97,4 +104,45 @@ func (s *GameService) DeleteGameIfEmpty(ctx context.Context, gameCode string) er
 
 func (s *GameService) GetGameByCode(ctx context.Context, gameCode string) (*store.Game, error) {
 	return s.gameStore.GetGameByCode(ctx, gameCode)
+}
+
+type GameQueryParams struct {
+	Code     string `json:"code"`
+	Status   string `json:"status"`
+	Page     int    `json:"page"`
+	PageSize int    `json:"page_size"`
+}
+
+func (s *GameService) ListGame(ctx context.Context, query GameQueryParams) (*store.PaginatedGame, error) {
+	filters := store.Filters{
+		Page:     query.Page,
+		PageSize: query.PageSize,
+	}
+
+	result, err := s.gameStore.List(ctx, query.Code, query.Status, filters)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *GameService) ValidateGameParams(params GameQueryParams) error {
+	if params.Status != "" {
+		if !slices.Contains([]string{"waiting", "playing", "ended"}, params.Status) {
+			return errors.New("invalid status: must be 'waiting', 'playing', or 'ended'")
+		}
+
+	}
+
+	if params.Page < 1 {
+		return errors.New("page must be greater than 0")
+	}
+
+	if params.PageSize < 1 || params.PageSize > 100 {
+		return errors.New("page_size must be between 1 and 100")
+	}
+
+	return nil
 }

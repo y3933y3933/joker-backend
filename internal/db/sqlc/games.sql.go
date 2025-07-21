@@ -120,6 +120,71 @@ func (q *Queries) GetGamesTodayCount(ctx context.Context) (int64, error) {
 	return games_today, err
 }
 
+const listGames = `-- name: ListGames :many
+SELECT
+  COUNT(*) OVER() AS total_count,
+  g.id,
+  g.code,
+  g.status,
+  COUNT(p.id) AS player_count,
+  g.created_at
+FROM games g
+LEFT JOIN players p ON p.game_id = g.id
+WHERE (UPPER(g.code) = UPPER($1) OR $1 = '')
+    AND (g.status = $2 OR $2 = ''  )
+GROUP BY g.id
+ORDER BY g.created_at DESC
+LIMIT $3 OFFSET $4
+`
+
+type ListGamesParams struct {
+	Upper  interface{}
+	Status string
+	Limit  int32
+	Offset int32
+}
+
+type ListGamesRow struct {
+	TotalCount  int64
+	ID          int64
+	Code        string
+	Status      string
+	PlayerCount int64
+	CreatedAt   pgtype.Timestamptz
+}
+
+func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGamesRow, error) {
+	rows, err := q.db.Query(ctx, listGames,
+		arg.Upper,
+		arg.Status,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGamesRow
+	for rows.Next() {
+		var i ListGamesRow
+		if err := rows.Scan(
+			&i.TotalCount,
+			&i.ID,
+			&i.Code,
+			&i.Status,
+			&i.PlayerCount,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateGameStatus = `-- name: UpdateGameStatus :exec
 UPDATE games
 SET status = $2,

@@ -52,7 +52,6 @@ func (s *FeedbackService) UpdateFeedbackReviewStatus(ctx context.Context, id int
 }
 
 func (s *FeedbackService) ValidateFeedbackParams(params FeedbackQueryParams) error {
-	// 驗證 level
 	if params.Type != "" {
 		if params.Type != "feature" && params.Type != "other" && params.Type != "issue" {
 			return errors.New("invalid level: must be 'feature' or 'issue' or 'other'")

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/y3933y3933/joker/internal/db/sqlc"
 	"github.com/y3933y3933/joker/internal/utils/errx"
@@ -33,6 +35,19 @@ type GameSummary struct {
 	Players     []GamePlayerSummary `json:"players"`
 }
 
+type AdminGame struct {
+	ID          int64     `json:"id"`
+	Code        string    `json:"code"`
+	Status      string    `json:"status"`
+	PlayerCount int64     `json:"playerCount"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type PaginatedGame struct {
+	Games []AdminGame `json:"games"`
+	Metadata
+}
+
 type PostgresGameStore struct {
 	queries *sqlc.Queries
 }
@@ -53,6 +68,7 @@ type GameStore interface {
 	DeleteByCode(ctx context.Context, gameCode string) error
 	GetGamesTodayCount(ctx context.Context) (int64, error)
 	GetActiveRoomsCount(ctx context.Context) (int64, error)
+	List(ctx context.Context, code, status string, filters Filters) (*PaginatedGame, error)
 }
 
 func (pg *PostgresGameStore) Create(ctx context.Context, game *Game) (*Game, error) {
@@ -157,4 +173,39 @@ func (pg *PostgresGameStore) GetGamesTodayCount(ctx context.Context) (int64, err
 
 func (pg *PostgresGameStore) GetActiveRoomsCount(ctx context.Context) (int64, error) {
 	return pg.queries.GetActiveRoomsCount(ctx)
+}
+
+func (pg *PostgresGameStore) List(ctx context.Context, code, status string, filters Filters) (*PaginatedGame, error) {
+
+	args := sqlc.ListGamesParams{
+		Upper:  code,
+		Status: status,
+		Limit:  int32(filters.limit()),
+		Offset: int32(filters.offset()),
+	}
+
+	fmt.Printf("Listing games with params: %+v\n", args)
+	rows, err := pg.queries.ListGames(ctx, args)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var totalCount = 0
+	gameResponse := make([]AdminGame, len(rows))
+	for i, f := range rows {
+		gameResponse[i] = AdminGame{
+			ID:          f.ID,
+			Code:        f.Code,
+			Status:      f.Status,
+			CreatedAt:   f.CreatedAt.Time,
+			PlayerCount: f.PlayerCount,
+		}
+		totalCount = int(f.TotalCount)
+	}
+
+	return &PaginatedGame{
+		Games:    gameResponse,
+		Metadata: CalculateMetadata(totalCount, filters.Page, filters.PageSize),
+	}, nil
 }

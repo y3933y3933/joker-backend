@@ -45,3 +45,19 @@ WHERE status != 'ended';
 
 
 
+
+-- name: ListGames :many
+SELECT
+  COUNT(*) OVER() AS total_count,
+  g.id,
+  g.code,
+  g.status,
+  COUNT(p.id) AS player_count,
+  g.created_at
+FROM games g
+LEFT JOIN players p ON p.game_id = g.id
+WHERE (UPPER(g.code) = UPPER($1) OR $1 = '')
+    AND (g.status = $2 OR $2 = ''  )
+GROUP BY g.id
+ORDER BY g.created_at DESC
+LIMIT $3 OFFSET $4;
