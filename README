@@ -1,5 +1,6 @@
 # Joker API
 ![joker](./joker.jpeg)
+![joker-admin](./joker-admin.jpeg)
 ## Description
 The backend API for Joker, an online social game built with Go. Powered by Gin, sqlc, and WebSocket, this API handles real-time gameplay, player interactions, and game state management. Designed for scalability and seamless multiplayer experiences.
 
